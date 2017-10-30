@@ -22,7 +22,9 @@ type Window struct {
 }
 
 func NewWindow() *Window {
+	//TODO
 	window := &Window{
+		NewWidget(),
 		t: TYPE_WINDOW,
 	}
 
