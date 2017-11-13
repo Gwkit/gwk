@@ -23,7 +23,7 @@ type Application struct {
 	canvasID  string
 	minHeight int
 	canvas    *dom.HTMLCanvasElement
-	manager   *WindowManager
+	Manager   *WindowManager
 }
 
 func NewApplication(canvasID, t string) *Application {
@@ -33,15 +33,18 @@ func NewApplication(canvasID, t string) *Application {
 	app.canvasID = canvasID
 	app.canvas = rt.GetRTInstance().GetMainCanvas(canvasID)
 	app.adjustCanvasSize()
-	app.manager = NewWindowManager(app, app.canvas, app.canvas)
+	app.Manager = NewWindowManager(app, *app.canvas, *app.canvas)
 
 	return app
+}
+
+func (app *Application) Canvas() *dom.HTMLCanvasElement {
+	return app.canvas
 }
 
 func (app *Application) adjustCanvasSize() {
 	var w, h int
 
-	canvas := app.canvas
 	width, height := rt.GetRTInstance().GetViewPort()
 
 	switch app.t {

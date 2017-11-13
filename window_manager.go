@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"honnef.co/go/js/dom"
 	"math"
+	"strconv"
 	"time"
 )
 
@@ -12,13 +13,13 @@ type BeforeDrawHandler func()
 type WindowManager struct {
 	window             *Window
 	w, h               int
-	canvas             *dom.HTMLCanvasElement
+	canvas             dom.HTMLCanvasElement
 	app                *Application
 	pointerDown        bool
 	target             *Window
 	drawCount          int
 	requestCount       int
-	startTime          time.Duration
+	startTime          time.Time
 	windows            []*Window
 	grabWindows        []*Window
 	eventLogging       bool
@@ -26,7 +27,7 @@ type WindowManager struct {
 	lastPointerPoint   *Point
 	enablePaint        bool
 	beforeDrawHandlers []BeforeDrawHandler
-	lastUpdateTime     time.Duration
+	lastUpdateTime     time.Time
 	currentEvent       dom.Event
 	xInputOffset       int
 	yInputOffset       int
@@ -35,14 +36,14 @@ type WindowManager struct {
 	maxFpsMode         bool
 	shouldShowFPS      bool
 	tipsWidget         *Widget
-	needRedraw         bool
+	needRedraw         int
 	ctx                *dom.CanvasRenderingContext2D
 }
 
 var manager = &WindowManager{}
 
-func NewWindowManager(app *Application, canvas *dom.HTMLCanvasElement, eventElement *dom.HTMLCanvasElement) *WindowManager {
-	SetEventsConsumer(manager, eventElement)
+func NewWindowManager(app *Application, canvas dom.HTMLCanvasElement, eventElement dom.HTMLCanvasElement) *WindowManager {
+	GetEventsManagerInstance().setEventsConsumer(manager, eventElement)
 	return manager.init(app, canvas)
 }
 
@@ -50,7 +51,7 @@ func GetWindowManagerInstance() *WindowManager {
 	return manager
 }
 
-func (manager *WindowManager) init(app *Application, canvas *dom.HTMLCanvasElement) *WindowManager {
+func (manager *WindowManager) init(app *Application, canvas dom.HTMLCanvasElement) *WindowManager {
 	manager.app = app
 	manager.canvas = canvas
 	manager.w = canvas.Width
@@ -79,7 +80,7 @@ func (manager *WindowManager) preprocessEvent(t string, e dom.Event) bool {
 }
 
 func (manager *WindowManager) getCanvas() *dom.HTMLCanvasElement {
-	return manager.canvas
+	return &manager.canvas
 }
 
 func (manager *WindowManager) getWidget() int {
@@ -203,7 +204,7 @@ func (manager *WindowManager) onPointerDown(point *Point) {
 
 	for _, window := range manager.windows {
 		if window.state == STATE_SELECTED && window != manager.target {
-			window.setState(STATE_NORMAL)
+			window.setState(STATE_NORMAL, false)
 		}
 	}
 
@@ -271,17 +272,27 @@ func (manager *WindowManager) isClicked() bool {
 }
 
 func (manager *WindowManager) isCtrlDown() bool {
-	return manager.currentEvent && manager.currentEvent.ctrlKey
+	if manager.currentEvent != nil {
+		if keyEvent, ok := manager.currentEvent.(dom.KeyboardEvent); ok {
+			return keyEvent.CtrlKey
+		}
+	}
+	return false
 }
 
 func (manager *WindowManager) isAltDown() bool {
-	return manager.currentEvent && manager.currentEvent.altKey
+	if manager.currentEvent != nil {
+		if keyEvent, ok := manager.currentEvent.(dom.KeyboardEvent); ok {
+			return keyEvent.AltKey
+		}
+	}
+	return false
 }
 
 func (manager *WindowManager) onContextMenu(point *Point) {
 	manager.target = manager.findTargetWin(point)
 
-	if manager.target {
+	if manager.target != nil {
 		manager.target.onContextMenu(point)
 	} else {
 		fmt.Printf("Window Manager: no target for x=%d y=%d", point.x, point.y)
@@ -376,15 +387,15 @@ func (manager *WindowManager) removeWindow(win *Window) {
 }
 
 func (manager *WindowManager) getFrameRate() int {
-	duration := time.Now() - manager.startTime
-	fps := math.Floor(1000 * manager.drawCount / duration)
+	duration := time.Now().Sub(manager.startTime).Seconds()
+	fps := math.Floor(float64(1000*manager.drawCount) / duration)
 
 	if duration > 1000 {
 		manager.drawCount = 0
 		manager.startTime = time.Now()
 	}
 
-	return fps
+	return int(fps)
 }
 
 func (manager *WindowManager) setMaxFPSMode(maxFpsMode bool) *WindowManager {
@@ -431,7 +442,7 @@ func (manager *WindowManager) postRedraw() {
 
 	manager.requestCount++
 	if manager.requestCount < 2 {
-		requestAnimationFrame(func() {
+		dom.GetWindow().RequestAnimationFrame(func(d time.Duration) {
 			manager.onDrawFrame()
 		})
 	}
@@ -447,28 +458,18 @@ func (manager *WindowManager) setTipsWidget(widget *Widget) {
 
 func (manager *WindowManager) drawTips(context *dom.CanvasRenderingContext2D) {
 	tipsWidget := manager.tipsWidget
-	if !tipsWidget || !tipsWidget.parent {
+	if tipsWidget == nil || tipsWidget.parent == nil {
 		return
 	}
 
 	hideTipsCanvas()
 	p := tipsWidget.getPositionInView()
-	win := tipsWidget.getWindow()
 
-	if win.canvas {
-		context = win.canvas.getContext("2d")
-		context.Save()
-		context.Translate(p.x, p.y)
-		context.BeginPath()
-		tipsWidget.drawTips(context)
-		context.Restore()
-	} else {
-		context.Save()
-		context.Translate(p.x, p.y)
-		context.BeginPath()
-		tipsWidget.drawTips(context)
-		context.Restore()
-	}
+	context.Save()
+	context.Translate(float64(p.x), float64(p.y))
+	context.BeginPath()
+	tipsWidget.drawTips(context)
+	context.Restore()
 
 	return
 }
@@ -492,30 +493,13 @@ func (manager *WindowManager) drawWindows(context *dom.CanvasRenderingContext2D)
 	return
 }
 
-func (manager *WindowManager) checkNeedRedraw(timeStep int) bool {
+func (manager *WindowManager) checkNeedRedraw(timeStep float64) bool {
 	return true
 }
 
 func (manager *WindowManager) getCanvas2D() *dom.CanvasRenderingContext2D {
 	if manager.ctx == nil {
-		ctx := manager.canvas.GetContext2d("2d")
-		rctx := reflect.ValueOf(ctx)
-		if !rctx.FieldByName("BeginFrame") {
-			ctx.BeginFrame = func() {}
-		}
-		if !rctx.FieldByName("EndFrame") {
-			ctx.EndFrame = func() {}
-		}
-
-		if !rctx.FieldByName("clipRect") {
-			ctx.ClipRect = func(x, y, w, h int) {
-				ctx.BeginPath()
-				ctx.Rect(x, y, w, h)
-				ctx.Clip()
-				ctx.BeginPath()
-			}
-		}
-		manager.ctx = ctx
+		manager.ctx = manager.canvas.GetContext2d()
 	}
 
 	return manager.ctx
@@ -523,9 +507,9 @@ func (manager *WindowManager) getCanvas2D() *dom.CanvasRenderingContext2D {
 
 func (manager *WindowManager) doDraw(ctx *dom.CanvasRenderingContext2D) {
 	now := time.Now()
-	timeStep := now - (manager.lastUpdateTime || 0)
+	timeStep := now.Sub(manager.lastUpdateTime)
 
-	if !manager.checkNeedRedraw(timeStep) {
+	if !manager.checkNeedRedraw(timeStep.Seconds()) {
 		return
 	}
 
@@ -538,7 +522,7 @@ func (manager *WindowManager) doDraw(ctx *dom.CanvasRenderingContext2D) {
 		str := manager.getFrameRate()
 		w, h := 100, 30
 		ctx.BeginPath()
-		ctx.Rect(0, 0, w, h)
+		ctx.Rect(0, 0, float64(w), float64(h))
 		ctx.FillStyle = "Black"
 		ctx.Fill()
 
@@ -547,7 +531,7 @@ func (manager *WindowManager) doDraw(ctx *dom.CanvasRenderingContext2D) {
 		ctx.TextBaseline = "middle"
 		ctx.Font = "20px Sans"
 		ctx.FillStyle = "White"
-		ctx.FillText(str, w>>1, h>>1)
+		ctx.FillText(strconv.Itoa(str), float64(w>>1), float64(h>>1), -1)
 		ctx.Restore()
 	}
 
@@ -562,9 +546,9 @@ func (manager *WindowManager) doDraw(ctx *dom.CanvasRenderingContext2D) {
 func (manager *WindowManager) draw() {
 	ctx := manager.getCanvas2D()
 
-	ctx.BeginFrame()
+	// ctx.BeginFrame()
 	manager.doDraw(ctx)
-	ctx.EndFrame()
+	// ctx.EndFrame()
 
 	return
 }

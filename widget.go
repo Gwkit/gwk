@@ -5,7 +5,7 @@ import (
 	"github.com/Luncher/gwk/pkg/utils"
 	"honnef.co/go/js/dom"
 	"math"
-	"strings"
+	"strconv"
 )
 
 var (
@@ -100,7 +100,8 @@ var (
 	BORDER_STYLE_ALL    = 0xffff
 )
 
-type CheckEnable func()
+type CheckEnable func() bool
+type SetChecked func(bool, bool) *Widget
 type RemovedHandler func()
 type WidgeVisit func(*Widget)
 type StateChangedHandler func(state string)
@@ -110,14 +111,14 @@ type ContextMenuHandler func(*Point)
 type ClickedHandler func(*Widget, *Point)
 type DoubleClickedHandler func(*Point)
 type LongPressHandler func(*Point)
-type KeyDownHandler func()
-type KeyUpHandler func()
+type KeyDownHandler func(int)
+type KeyUpHandler func(int)
 type OnBeforePaintHandler func(*dom.CanvasRenderingContext2D)
 type OnAfterPaintHandler func(*dom.CanvasRenderingContext2D)
 type WheelHandler func(float64)
 
 type Widget struct {
-	id                   int
+	id                   string
 	t                    string
 	name                 string
 	rect                 *Rect
@@ -129,6 +130,8 @@ type Widget struct {
 	tag                  string
 	tips                 string
 	enable               bool
+	checkable            bool
+	setChecked           SetChecked
 	checkEnable          CheckEnable
 	removedHandler       RemovedHandler
 	children             []*Widget
@@ -153,6 +156,7 @@ type Widget struct {
 	stateChangedHandler  StateChangedHandler
 	onSized              OnResizedHandler
 	contextMenuHandler   ContextMenuHandler
+	longPressHandler     LongPressHandler
 	keyUpHandler         KeyUpHandler
 	keyDownHandler       KeyDownHandler
 	clickedHandler       ClickedHandler
@@ -175,7 +179,7 @@ func NewWidget(parent *Widget, x, y, w, h float32) *Widget {
 		rect:         &Rect{x: int(x), y: int(y), w: int(w), h: int(h)},
 	}
 
-	widget.setState(STATE_NORMAL)
+	widget.setState(STATE_NORMAL, false)
 
 	if widget.parent != nil {
 		var border int
@@ -208,13 +212,13 @@ func NewWidget(parent *Widget, x, y, w, h float32) *Widget {
 	return widget
 }
 
-func (w *Widget) useTheme(t string) *Widget {
+func (w *Widget) UseTheme(t string) *Widget {
 	w.themeType = t
 
 	return w
 }
 
-func (w *Widget) isSelected(value bool) bool {
+func (w *Widget) isSelected() bool {
 	return w.selected
 }
 
@@ -258,7 +262,7 @@ func (w *Widget) showFPS(maxFpsMode bool) {
 }
 
 func (w *Widget) isPointerDown() bool {
-	GetWindowManagerInstance().isPointerDown()
+	return GetWindowManagerInstance().isPointerDown()
 }
 
 func (w *Widget) isClicked() bool {
@@ -391,19 +395,22 @@ func (w *Widget) postRedrawAll() {
 	return
 }
 
-func (w *Widget) postRedraw() {
+func (w *Widget) PostRedraw() {
 	GetWindowManagerInstance().postRedraw()
 
 	return
 }
 
 func (w *Widget) redraw(rect *Rect) {
-	p := w.getAbsPosition()
+	// p := w.getAbsPosition()
 
-	if rect == nil {
-		rect = &Rect{x: 0, y: 0, w: w.rect.w, h: w.rect.h}
-	}
+	// if rect == nil {
+	// 	rect = &Rect{x: 0, y: 0, w: w.rect.w, h: w.rect.h}
+	// }
+	// rect.x = p.x + rect.x
+	// rect.y = p.y + rect.y
 
+	// GetWindowManagerInstance().redraw(rect)
 	//TODO
 	// GetWindowManagerInstance().redraw(rect)
 
@@ -529,10 +536,10 @@ func (w *Widget) setTextOf(name, text string, notify bool) *Widget {
 	return child
 }
 
-func (w *Widget) setVisibleOf(name, value string) *Widget {
+func (w *Widget) setVisibleOf(name string, value bool) *Widget {
 	child := w.lookup(name, true)
 
-	if child {
+	if child != nil {
 		child.setVisible(value)
 	} else {
 		fmt.Printf("not found %s", name)
@@ -541,7 +548,7 @@ func (w *Widget) setVisibleOf(name, value string) *Widget {
 	return child
 }
 
-func (w *Widget) setText(text string) *Widget {
+func (w *Widget) setText(text string, notify bool) *Widget {
 	w.text = text
 	w.setNeedRelayout(true)
 
@@ -584,7 +591,7 @@ func (widget *Widget) drawInputTips(context *dom.CanvasRenderingContext2D) {
 		return
 	}
 
-	style := widget.getStyle()
+	style := widget.getStyle("")
 	context.Save()
 	context.Font = style.font
 	context.FillStyle = "#E0E0E0"
@@ -605,19 +612,13 @@ func (widget *Widget) drawInputTips(context *dom.CanvasRenderingContext2D) {
 func (w *Widget) drawTips(context *dom.CanvasRenderingContext2D) {
 	tips := w.getTips()
 	if len(tips) > 0 {
-		style := w.getStyle()
+		style := w.getStyle("")
 		x := w.rect.w >> 1
 		y := w.rect.h >> 1
-		font := style.tipsFont
-		if len(font) == 0 {
-			font = style.font
-		}
-		textColor := style.tipsTextColor
-		if len(textColor) == 0 {
-			textColor = style.textColor
-		}
+		font := style.font
+		textColor := style.textColor
 
-		if len(font) && len(textColor) {
+		if len(font) > 0 && len(textColor) > 0 {
 			context.TextAlign = "center"
 			context.TextBaseline = "middle"
 			context.Font = font
@@ -629,13 +630,13 @@ func (w *Widget) drawTips(context *dom.CanvasRenderingContext2D) {
 	return
 }
 
-func (w *Widget) setID(id int) *Widget {
+func (w *Widget) setID(id string) *Widget {
 	w.id = id
 
 	return w
 }
 
-func (w *Widget) getID() int {
+func (w *Widget) getID() string {
 	return w.id
 }
 
@@ -706,7 +707,7 @@ func (w *Widget) setState(state string, recursive bool) *Widget {
 	}
 
 	if recursive && w.target != nil {
-		me.target.setState(state, recursive)
+		w.target.setState(state, recursive)
 	}
 
 	return w
@@ -715,7 +716,7 @@ func (w *Widget) setState(state string, recursive bool) *Widget {
 func (w *Widget) move(x, y int) *Widget {
 	w.rect.x = x
 	w.rect.y = y
-	if me.onMove != nil {
+	if w.onMoved != nil {
 		w.onMoved()
 	}
 
@@ -726,11 +727,11 @@ func (w *Widget) moveToCenter(moveX, moveY int) *Widget {
 	pw := w.parent.rect.w
 	ph := w.parent.rect.h
 
-	if moveX {
+	if moveX != 0 {
 		w.rect.x = (pw - w.rect.w) >> 1
 	}
 
-	if moveY {
+	if moveY != 0 {
 		w.rect.y = (ph - w.rect.h) >> 1
 	}
 
@@ -747,7 +748,7 @@ func (w *Widget) moveToBottom(border int) *Widget {
 func (w *Widget) moveDelta(dx, dy int) *Widget {
 	w.rect.x = w.rect.x + dx
 	w.rect.y = w.rect.y + dy
-	if w.onMoved {
+	if w.onMoved != nil {
 		w.onMoved()
 	}
 
@@ -757,12 +758,12 @@ func (w *Widget) moveDelta(dx, dy int) *Widget {
 func (widget *Widget) resize(w, h int) *Widget {
 	widget.rect.w = w
 	widget.rect.h = h
-	if w.onSized {
-		w.onSized()
+	if widget.onSized != nil {
+		widget.onSized()
 	}
-	w.setNeedRelayout(true)
+	widget.setNeedRelayout(true)
 
-	return w
+	return widget
 }
 
 func (w *Widget) setStateChangedHandler(stateChangedHandler StateChangedHandler) *Widget {
@@ -796,16 +797,16 @@ func (w *Widget) setKeyUpHandler(keyUpHandler KeyUpHandler) *Widget {
 }
 
 func (w *Widget) onClicked(point *Point) bool {
-	if w.clickedHandler {
+	if w.clickedHandler != nil {
 		w.clickedHandler(w, point)
 	}
 
-	w.postRedraw()
+	w.PostRedraw()
 
 	return w.clickedHandler != nil
 }
 
-func (w *Widget) lookup(id int, recursive bool) *Widget {
+func (w *Widget) lookup(id string, recursive bool) *Widget {
 	for _, child := range w.children {
 		if child.id == id {
 			return child
@@ -824,16 +825,16 @@ func (w *Widget) lookup(id int, recursive bool) *Widget {
 	return nil
 }
 
-func (w *Widget) onRelayout(context *dom.HTMLCanvasElement, force bool) {
+func (w *Widget) onRelayout(context *dom.CanvasRenderingContext2D, force bool) {
 
 }
 
-func (w *Widget) relayout(canvas *dom.CanvasRenderingContext2D, force bool) *Widget {
-	if !w.needRelayout || !force || !len(w.children) {
+func (w *Widget) relayout(context *dom.CanvasRenderingContext2D, force bool) *Widget {
+	if !w.needRelayout || !force || len(w.children) == 0 {
 		return w
 	}
 
-	w.onRelayout(canvas, force)
+	w.onRelayout(context, force)
 	w.needRelayout = false
 
 	return w
@@ -845,12 +846,11 @@ func (w *Widget) setLineWidth(lineWidth int) *Widget {
 	return w
 }
 
-func (w *Widget) getLineWidth(style dom.CSSStyleDeclaration) int {
-	if w.lineWidth {
+func (w *Widget) getLineWidth(style *ThemeStyle) int {
+	if w.lineWidth > 0 {
 		return w.lineWidth
-	} else {
-		return style.GetPropertyValue("lineWidth")
 	}
+	return 0
 }
 
 func (w *Widget) setRoundRadius(roundRadius int) *Widget {
@@ -860,10 +860,10 @@ func (w *Widget) setRoundRadius(roundRadius int) *Widget {
 }
 
 func (w *Widget) ensureTheme() *Widget {
-	if len(w.themeType) {
-		w.theme = GetThemeManagerInstance().get(w.themeType)
+	if len(w.themeType) > 0 {
+		w.theme = GetThemeManagerInstance().get(w.themeType, false)
 	} else {
-		w.theme = GetThemeManagerInstance().get(w.t)
+		w.theme = GetThemeManagerInstance().get(w.t, false)
 	}
 
 	return w
@@ -881,7 +881,7 @@ func (w *Widget) getStyle(_state string) *ThemeStyle {
 		if w.selectable && w.isSelected() {
 			style = w.theme[STATE_DISABLE_SELECTED]
 		} else {
-			style = w.theme[STATE_DISABLE_DISABLE]
+			style = w.theme[STATE_DISABLE]
 		}
 	} else {
 		if w.selectable && w.selected {
@@ -895,7 +895,7 @@ func (w *Widget) getStyle(_state string) *ThemeStyle {
 		}
 	}
 
-	if !style {
+	if style != nil {
 		style = w.theme[STATE_NORMAL]
 	}
 
@@ -908,55 +908,40 @@ func (w *Widget) setImageDisplay(imageDisplay int) *Widget {
 	return w
 }
 
-func (w *Widget) setBorderStyle(borderStyle int) {
+func (w *Widget) setBorderStyle(borderStyle int) *Widget {
 	w.borderStyle = borderStyle
 
 	return w
 }
 
-func (w *Widget) paintBackground(canvas dom.HTMLCanvasElement) {
-	style := w.getStyle()
-	if style {
-		if style.bgImage {
-			w.paintBackgroundImage(canvas, style)
+func (w *Widget) paintBackground(context *dom.CanvasRenderingContext2D) {
+	style := w.getStyle("")
+	if style != nil {
+		if style.bgImage != nil {
+			w.paintBackgroundImage(context, style)
 		} else {
-			w.paintBackgroundColor(canvas, style)
+			w.paintBackgroundColor(context, style)
 		}
 	}
 }
 
-func (w *Widget) paintBackgroundImage(canvas dom.HTMLCanvasElement, style *ThemeStyle) {
+func (w *Widget) paintBackgroundImage(context *dom.CanvasRenderingContext2D, style *ThemeStyle) {
 	dst := w.rect
-	image := style.bgImage.getImage()
-	src := style.bgImage.getImageRect()
+	bgImage := style.bgImage.(Image)
+	image := bgImage.getImage()
+	src := bgImage.getImageRect()
 
 	var imageDisplay int
 	imageDisplay = w.imageDisplay
-	if style.imageDisplay {
-		imageDisplay = style.imageDisplay
-	}
 
-	if image {
+	if image != nil {
 		var topOut, leftOut, rightOut, bottomOut int
-		if style.topOut {
-			topOut = style.topOut
-		}
-		if style.leftOut {
-			leftOut = style.leftOut
-		}
-		if style.rightOut {
-			rightOut = style.rightOut
-		}
-		if style.bottomOut {
-			bottomOut = style.bottomOut
-		}
-
 		x := -leftOut
 		y := topOut
 		w := dst.w + rightOut + leftOut
 		h := dst.h + bottomOut + topOut
 
-		style.bgImage.draw(canvas, imageDisplay, x, y, w, h, src)
+		bgImage.draw(context, imageDisplay, x, y, w, h, src)
 	}
 
 	return
@@ -965,48 +950,48 @@ func (w *Widget) paintBackgroundImage(canvas dom.HTMLCanvasElement, style *Theme
 func (widget *Widget) paintLeftBorder(context *dom.CanvasRenderingContext2D, w, h int) {
 	context.BeginPath()
 	context.MoveTo(0, 0)
-	context.LineTo(0, h)
+	context.LineTo(0, float64(h))
 	context.Stroke()
 }
 
 func (widget *Widget) paintRightBorder(context *dom.CanvasRenderingContext2D, w, h int) {
 	context.BeginPath()
-	context.MoveTo(w, 0)
-	context.LineTo(w, h)
+	context.MoveTo(float64(w), 0)
+	context.LineTo(float64(w), float64(h))
 	context.Stroke()
 }
 
 func (widget *Widget) paintTopBorder(context *dom.CanvasRenderingContext2D, w, h int) {
 	context.BeginPath()
 	context.MoveTo(0, 0)
-	context.LineTo(w, 0)
+	context.LineTo(float64(w), 0)
 	context.Stroke()
 }
 
 func (widget *Widget) paintBottomBorder(context *dom.CanvasRenderingContext2D, w, h int) {
 	context.BeginPath()
-	context.MoveTo(0, h)
-	context.LineTo(w, h)
+	context.MoveTo(0, float64(h))
+	context.LineTo(float64(w), float64(h))
 	context.Stroke()
 }
 
-func (w *Widget) paintBackgroundColor(context dom.CanvasRenderingContext2D, style ThemeStyle) {
+func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, style *ThemeStyle) {
 	dst := w.rect
 	context.BeginPath()
-	if w.roundRadius || style.roundRadius {
-		roundRadius := math.Min((dst.h>>1)-1, style.roundRadius)
-		utils.DrawRoundRect(context, dst.w, dst.h, roundRadius)
+	if w.roundRadius != 0 {
+		roundRadius := math.Min(float64((dst.h>>1)-1), float64(w.roundRadius))
+		utils.DrawRoundRect(context, float64(dst.w), float64(dst.h), roundRadius, 0)
 	} else {
-		context.Rect(0, 0, dst.w, dst.h)
+		context.Rect(0, 0, float64(dst.w), float64(dst.h))
 	}
 
-	if style.fillColor {
+	if style.fillColor != "" {
 		context.FillStyle = style.fillColor
 		context.Fill()
 	}
 
 	lineWidth := w.getLineWidth(style)
-	if !lineWidth || !style.lineColor || w.borderStyle == BORDER_STYLE_NONE {
+	if lineWidth > 0 || style.lineColor != "" || w.borderStyle == BORDER_STYLE_NONE {
 		return
 	}
 
@@ -1020,19 +1005,19 @@ func (w *Widget) paintBackgroundColor(context dom.CanvasRenderingContext2D, styl
 		return
 	}
 
-	if w.borderStyle & BORDER_STYLE_LEFT {
+	if w.borderStyle&BORDER_STYLE_LEFT != 0 {
 		w.paintLeftBorder(context, width, height)
 	}
 
-	if w.borderStyle & BORDER_STYLE_RIGHT {
+	if w.borderStyle&BORDER_STYLE_RIGHT != 0 {
 		w.paintRightBorder(context, width, height)
 	}
 
-	if w.borderStyle & BORDER_STYLE_TOP {
+	if w.borderStyle&BORDER_STYLE_TOP != 0 {
 		w.paintTopBorder(context, width, height)
 	}
 
-	if w.borderStyle & BORDER_STYLE_BOTTOM {
+	if w.borderStyle&BORDER_STYLE_BOTTOM != 0 {
 		w.paintBottomBorder(context, width, height)
 	}
 	context.BeginPath()
@@ -1040,19 +1025,19 @@ func (w *Widget) paintBackgroundColor(context dom.CanvasRenderingContext2D, styl
 	return
 }
 
-func (w *Widget) paintSelf(context dom.CanvasRenderingContext2D) *Widget {
+func (w *Widget) paintSelf(context *dom.CanvasRenderingContext2D) *Widget {
 	return w
 }
 
-func (w *Widget) beforePaint(context dom.CanvasRenderingContext2D) *Widget {
-	if w.onBeforePaint {
+func (w *Widget) beforePaint(context *dom.CanvasRenderingContext2D) *Widget {
+	if w.onBeforePaint != nil {
 		w.onBeforePaint(context)
 	}
 	return w
 }
 
-func (w *Widget) afterPaint(context dom.CanvasRenderingContext2D) *Widget {
-	if w.onAfterPaint {
+func (w *Widget) afterPaint(context *dom.CanvasRenderingContext2D) *Widget {
+	if w.onAfterPaint != nil {
 		w.onAfterPaint(context)
 	}
 	return w
@@ -1064,7 +1049,7 @@ func (w *Widget) setPaintFocusLater(paintFocusLater bool) *Widget {
 	return w
 }
 
-func (w *Widget) paintChildren(context dom.CanvasRenderingContext2D) *Widget {
+func (w *Widget) paintChildren(context *dom.CanvasRenderingContext2D) *Widget {
 	if w.paintFocusLater {
 		w.paintChildrenFocusLater(context)
 	} else {
@@ -1074,15 +1059,15 @@ func (w *Widget) paintChildren(context dom.CanvasRenderingContext2D) *Widget {
 	return w
 }
 
-func (w *Widget) paintChildrenDefault(context dom.CanvasRenderingContext2D) *Widget {
+func (w *Widget) paintChildrenDefault(context *dom.CanvasRenderingContext2D) *Widget {
 	for _, child := range w.children {
 		child.draw(context)
 	}
 
-	return
+	return w
 }
 
-func (w *Widget) paintChildrenFocusLater(context dom.CanvasRenderingContext2D) {
+func (w *Widget) paintChildrenFocusLater(context *dom.CanvasRenderingContext2D) {
 	var focusChild *Widget
 	for _, child := range w.children {
 		if child.state == STATE_OVER || child.state == STATE_ACTIVE {
@@ -1092,7 +1077,7 @@ func (w *Widget) paintChildrenFocusLater(context dom.CanvasRenderingContext2D) {
 		}
 	}
 
-	if focusChild {
+	if focusChild != nil {
 		focusChild.draw(context)
 	}
 
@@ -1103,21 +1088,21 @@ func (w *Widget) ensureImages() {
 	return
 }
 
-func (w *Widget) draw(context dom.CanvasRenderingContext2D) {
+func (w *Widget) draw(context *dom.CanvasRenderingContext2D) {
 	if !w.visible {
 		return
 	}
 
-	if w.checkEnable {
+	if w.checkEnable != nil {
 		w.setEnable(w.checkEnable())
 	}
 
 	w.ensureImages()
 
-	context.save()
+	context.Save()
 	w.relayout(context, false)
 
-	context.Translate(w.rect.x, w.rect.y)
+	context.Translate(float64(w.rect.x), float64(w.rect.y))
 	w.beforePaint(context)
 	w.paintBackground(context)
 	w.paintSelf(context)
@@ -1140,11 +1125,11 @@ func (w *Widget) isVisible() bool {
 	return w.visible
 }
 
-func (w *Widget) onShow(visible bool) {
+func (w *Widget) onShow(visible bool) bool {
 	return true
 }
 
-func (w *Widget) show(visible bool) {
+func (w *Widget) show(visible bool) *Widget {
 	if visible != w.visible {
 		w.visible = visible
 		w.onShow(visible)
@@ -1159,8 +1144,8 @@ func (w *Widget) showAll(visible bool) *Widget {
 		child.showAll(visible)
 	}
 
-	if !w.parent {
-		w.postRedraw()
+	if w.parent != nil {
+		w.PostRedraw()
 	}
 
 	return w
@@ -1169,7 +1154,7 @@ func (w *Widget) showAll(visible bool) *Widget {
 func (w *Widget) selectAllChildren(selected bool) *Widget {
 	for _, child := range w.children {
 		if child.checkable {
-			child.setChecked(selected)
+			child.setChecked(selected, false)
 		}
 	}
 
@@ -1177,7 +1162,8 @@ func (w *Widget) selectAllChildren(selected bool) *Widget {
 }
 
 func (w *Widget) closeWindow(retInfo interface{}) *Widget {
-	w.getWindow().close(retInfo)
+	//TODO
+	// w.getWindow().close(retInfo)
 
 	return w
 }
@@ -1208,19 +1194,19 @@ func (w *Widget) onPointerDown(point *Point) bool {
 	}
 
 	target := w.findTarget(point)
-	if w.target && w.target != target {
-		w.target.setState(STATE_NORMAL)
+	if w.target != nil && w.target != target {
+		w.target.setState(STATE_NORMAL, false)
 	}
 
-	if target {
-		target.setState(STATE_ACTIVE)
+	if target != nil {
+		target.setState(STATE_ACTIVE, false)
 		target.onPointerDown(point)
 	} else {
 		w.changeCursor()
 	}
 
 	w.target = target
-	w.postRedraw()
+	w.PostRedraw()
 
 	return true
 }
@@ -1237,40 +1223,40 @@ func (w *Widget) onPointerMove(point *Point) bool {
 		target = w.findTarget(point)
 	}
 
-	if w.target && target != w.target {
+	if w.target != nil && target != w.target {
 		w.target.setState(STATE_NORMAL, true)
 	}
 
-	if target {
+	if target != nil {
 		if w.isPointerDown() {
-			target.setState(STATE_ACTIVE)
+			target.setState(STATE_ACTIVE, false)
 		} else {
-			target.setState(STATE_OVER)
+			target.setState(STATE_OVER, false)
 		}
 	} else {
 		w.changeCursor()
 	}
 
 	w.target = target
-	w.postRedraw()
+	w.PostRedraw()
 
 	return true
 }
 
-func (w *Widget) onPoingterUp(point *Point) bool {
+func (w *Widget) onPointerUp(point *Point) bool {
 	if !w.enable {
 		return false
 	}
 
 	target := w.findTarget(point)
-	if target && w.target != target {
-		w.target.setState(STATE_NORMAL)
-		w.target.onPoingterUp(point)
+	if target != nil && w.target != target {
+		w.target.setState(STATE_NORMAL, false)
+		w.target.onPointerUp(point)
 	}
 
-	if target {
-		target.setState(STATE_OVER)
-		target.onPoingterUp(point)
+	if target != nil {
+		target.setState(STATE_OVER, false)
+		target.onPointerUp(point)
 	} else {
 		w.changeCursor()
 	}
@@ -1282,22 +1268,22 @@ func (w *Widget) onPoingterUp(point *Point) bool {
 			}
 		}()
 
-		w.setState(STATE_ACTIVE)
+		w.setState(STATE_ACTIVE, false)
 		w.onClicked(point)
 	}
 
 	w.target = target
-	w.postRedraw()
+	w.PostRedraw()
 
 	return true
 }
 
 func (w *Widget) onKeyDown(code int) {
-	if w.target {
+	if w.target != nil {
 		w.target.onKeyDown(code)
 	}
 
-	if w.keyDownHandler {
+	if w.keyDownHandler != nil {
 		w.keyDownHandler(code)
 	}
 
@@ -1307,11 +1293,11 @@ func (w *Widget) onKeyDown(code int) {
 }
 
 func (w *Widget) onKeyUp(code int) {
-	if w.target {
+	if w.target != nil {
 		w.target.onKeyUp(code)
 	}
 
-	if w.keyUpHandler {
+	if w.keyUpHandler != nil {
 		w.keyUpHandler(code)
 	}
 
@@ -1321,11 +1307,11 @@ func (w *Widget) onKeyUp(code int) {
 }
 
 func (w *Widget) onWheel(delta float64) bool {
-	if w.target {
+	if w.target != nil {
 		return w.target.onWheel(delta)
 	}
 
-	if w.wheelHandler {
+	if w.wheelHandler != nil {
 		w.wheelHandler(delta)
 	}
 
@@ -1333,35 +1319,35 @@ func (w *Widget) onWheel(delta float64) bool {
 }
 
 func (w *Widget) onDoubleClick(point *Point) {
-	var target *Widget
+	// var target *Widget
 
-	if win, ok := w.(*Window); ok && win.grabWidget {
-		target = win.grabWidget
-	} else {
-		target = w.findTarget(point)
-	}
+	// if win, ok := w.(*Window); ok && win.grabWidget != nil {
+	// 	target = win.grabWidget
+	// } else {
+	// 	target = w.findTarget(point)
+	// }
 
-	if target {
-		target.onDoubleClick(point)
-		w.target = target
-	}
+	// if target != nil {
+	// 	target.onDoubleClick(point)
+	// 	w.target = target
+	// }
 
-	if w.state != STATE_DISABLE && w.doubleClickedHandler {
-		w.doubleClickedHandler(point)
-	}
+	// if w.state != STATE_DISABLE && w.doubleClickedHandler != nil {
+	// 	w.doubleClickedHandler(point)
+	// }
 
-	return
+	// return
 }
 
 func (w *Widget) onContextMenu(point *Point) {
 	target := w.findTarget(point)
 
-	if target {
+	if target != nil {
 		target.onContextMenu(point)
 		w.target = target
 	}
 
-	if w.state != STATE_DISABLE && w.contextMenuHandler {
+	if w.state != STATE_DISABLE && w.contextMenuHandler != nil {
 		w.contextMenuHandler(point)
 	}
 
@@ -1371,12 +1357,12 @@ func (w *Widget) onContextMenu(point *Point) {
 func (w *Widget) onLongPress(point *Point) {
 	target := w.findTarget(point)
 
-	if target {
+	if target != nil {
 		target.onLongPress(point)
 		w.target = target
 	}
 
-	if w.state != STATE_DISABLE && w.longPressHandler {
+	if w.state != STATE_DISABLE && w.longPressHandler != nil {
 		w.longPressHandler(point)
 	}
 
@@ -1399,57 +1385,60 @@ func resizeCanvas(canvas dom.HTMLCanvasElement, w, h int) {
 func getCanvas(x, y, w, h, zIndex int) dom.HTMLCanvasElement {
 	var canvas dom.HTMLCanvasElement
 
-	if len(canvasPool) {
-		canvas = canvasPool[canvas.Length-1]
-		canvasPool = append(canvasPool[:canvas.Length-1])
+	if len(canvasPool) != 0 {
+		canvas = canvasPool[len(canvasPool)-1]
+		canvasPool = canvasPool[:len(canvasPool)-1]
 	} else {
-		canvas = dom.Document.CreateElement("canvas")
+		document := dom.GetWindow().Document()
+		canvas = document.CreateElement("canvas").(dom.HTMLCanvasElement)
 	}
 
 	resizeCanvas(canvas, w, h)
-	canvas.Style().SetProperty("position", "absolute")
-	canvas.Style().SetProperty("opacity", 1)
-	canvas.Style().SetProperty("left", fmt.Sprintf("%dpx", x))
-	canvas.Style().SetProperty("top", fmt.Sprintf("%dpx", y))
-	canvas.Style().SetProperty("width", fmt.Sprintf("%dpx", w))
-	canvas.Style().SetProperty("height", fmt.Sprintf("%dpx", h))
-	canvas.Style().SetProperty("zIndex", zIndex)
+	canvas.Style().SetProperty("position", "absolute", "")
+	canvas.Style().SetProperty("opacity", fmt.Sprintf("%d", 1), "")
+	canvas.Style().SetProperty("left", fmt.Sprintf("%dpx", x), "")
+	canvas.Style().SetProperty("top", fmt.Sprintf("%dpx", y), "")
+	canvas.Style().SetProperty("width", fmt.Sprintf("%dpx", w), "")
+	canvas.Style().SetProperty("height", fmt.Sprintf("%dpx", h), "")
+	canvas.Style().SetProperty("zIndex", fmt.Sprintf("%d", zIndex), "")
 
-	return
+	return canvas
 }
 
 func putCanvas(canvas dom.HTMLCanvasElement) {
-	canvas.Style().SetProperty("zIndex", -1)
-	canvas.Style().SetProperty("opacity", 0)
+	canvas.Style().SetProperty("zIndex", strconv.Itoa(-1), "")
+	canvas.Style().SetProperty("opacity", strconv.Itoa(0), "")
 	canvasPool = append(canvasPool, canvas)
 }
 
-var tipsCanvas dom.HTMLCanvasElement
+var tipsCanvas *dom.HTMLCanvasElement
 
 func getTipsCanvas(x, y, w, h, zIndex int) dom.HTMLCanvasElement {
-	if !tipsCanvas {
-		tipsCanvas = getCanvas(x, y, w, h, zIndex)
-		body := dom.Document.GetElementsByTagName("body")[0]
+	if tipsCanvas == nil {
+		canvas := getCanvas(x, y, w, h, zIndex)
+		tipsCanvas = &canvas
+		document := dom.GetWindow().Document()
+		body := document.GetElementsByTagName("body")[0]
 		body.AppendChild(tipsCanvas)
 	}
 
-	canvas := tipsCanvas
+	canvas := *tipsCanvas
 
 	canvas.Width = w
 	canvas.Height = h
-	canvas.Style().SetProperty("position", "absolute")
-	canvas.Style().SetProperty("opacity", 1)
-	canvas.Style().SetProperty("left", fmt.Sprintf("%dpx", x))
-	canvas.Style().SetProperty("top", fmt.Sprintf("%dpx", y))
-	canvas.Style().SetProperty("width", fmt.Sprintf("%dpx", w))
-	canvas.Style().SetProperty("height", fmt.Sprintf("%dpx", h))
-	canvas.Style().SetProperty("zIndex", zIndex)
+	canvas.Style().SetProperty("position", "absolute", "")
+	canvas.Style().SetProperty("opacity", strconv.Itoa(1), "")
+	canvas.Style().SetProperty("left", fmt.Sprintf("%dpx", x), "")
+	canvas.Style().SetProperty("top", fmt.Sprintf("%dpx", y), "")
+	canvas.Style().SetProperty("width", fmt.Sprintf("%dpx", w), "")
+	canvas.Style().SetProperty("height", fmt.Sprintf("%dpx", h), "")
+	canvas.Style().SetProperty("zIndex", strconv.Itoa(zIndex), "")
 
 	return canvas
 }
 
 func hideTipsCanvas() {
-	if tipsCanvas {
-		tipsCanvas.Style().SetProperty("zIndex", -1)
+	if tipsCanvas != nil {
+		tipsCanvas.Style().SetProperty("zIndex", strconv.Itoa(-1), "")
 	}
 }

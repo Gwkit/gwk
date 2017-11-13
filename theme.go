@@ -199,9 +199,9 @@ func (manager *ThemeManager) getThemeURL() string {
 	return manager.themeURL
 }
 
-func (manager *ThemeManager) loadThemeURL(url string) {
+func (manager *ThemeManager) LoadThemeURL(url string) {
 	if url != "" {
-		url := manager.getThemeURL()
+		url = manager.getThemeURL()
 	}
 
 	resp, err := http.Get(url)

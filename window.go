@@ -1,7 +1,7 @@
 package gwk
 
 import (
-	"github.com/gopherjs/gopherjs/js"
+	"github.com/Luncher/gwk/pkg/rt"
 	"honnef.co/go/js/dom"
 	"math"
 )
@@ -23,11 +23,11 @@ type Window struct {
 
 func NewWindow(manager *WindowManager, x, y, w, h float32) *Window {
 	window := &Window{
-		Widget: NewWidget(nil, x, y, w, h),
+		Widget: *NewWidget(nil, x, y, w, h),
 		t:      TYPE_WINDOW,
 	}
 
-	if manager {
+	if manager != nil {
 		window.manager = manager
 	} else {
 		window.manager = GetWindowManagerInstance()
@@ -49,7 +49,7 @@ func (window *Window) ungrab() *Window {
 }
 
 func (window *Window) moveToCenter() *Window {
-	width, height := GetRTInstance().GetViewPort()
+	width, height := rt.GetRTInstance().GetViewPort()
 	var sw = math.Min(float64(window.manager.w), float64(width))
 	var sh = math.Min(float64(window.manager.h), float64(height))
 
@@ -75,7 +75,7 @@ func (window *Window) onPointerDown(point *Point) {
 		window.Widget.onPointerDown(point)
 	}
 
-	window.postRedraw()
+	window.PostRedraw()
 
 	return
 }
@@ -90,7 +90,7 @@ func (window *Window) onPointerMove(point *Point) {
 		window.Widget.onPointerMove(point)
 	}
 
-	window.postRedraw()
+	window.PostRedraw()
 
 	return
 }
@@ -106,7 +106,7 @@ func (window *Window) onPointerUp(point *Point) {
 	}
 	window.pointerDown = false
 
-	window.postRedraw()
+	window.PostRedraw()
 
 	return
 }
@@ -128,7 +128,7 @@ func (window *Window) onContextMenu(point *Point) {
 	return
 }
 
-func (window *Window) onKeyDown(code string) {
+func (window *Window) onKeyDown(code int) {
 	if widget, ok := window.grabWidget.(Widget); ok {
 		widget.onKeyDown(code)
 	} else {
@@ -138,7 +138,7 @@ func (window *Window) onKeyDown(code string) {
 	return
 }
 
-func (window *Window) onKeyUp(code string) {
+func (window *Window) onKeyUp(code int) {
 	if widget, ok := window.grabWidget.(Widget); ok {
 		widget.onKeyUp(code)
 	} else {
