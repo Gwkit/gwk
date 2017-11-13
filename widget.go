@@ -2,9 +2,10 @@ package gwk
 
 import (
 	"fmt"
-	"strings"
+	"github.com/Luncher/gwk/pkg/utils"
 	"honnef.co/go/js/dom"
 	"math"
+	"strings"
 )
 
 var (
@@ -116,53 +117,53 @@ type OnAfterPaintHandler func(*dom.CanvasRenderingContext2D)
 type WheelHandler func(float64)
 
 type Widget struct {
-	id                  int
-	t                   string
-	name                string
-	rect                *Rect
-	pointerDown         bool
-	visible             bool
-	state               string
-	parent              *Widget
-	text                string
-	tag                 string
-	tips                string
-	enable              bool
-	checkEnable         CheckEnable
-	removedHandler      RemovedHandler
-	children            []*Widget
-	point               *Point
-	cursor              string
-	imageDisplay        int
-	borderStyle         int
-	border              int
-	themeType           string
-	selected            bool
-	selectable          bool
-	needRelayout        bool
-	isScrollView        bool
-	xOffset             int
-	yOffset             int
-	target              *Widget
-	inputTips           string
-	leftMargin          int
-	editing             bool
-	userData            interface{}
-	onMoved             OnMovedHandler
-	stateChangedHandler StateChangedHandler
-	onSized             OnResizedHandler
-	contextMenuHandler  ContextMenuHandler
-	keyUpHandler        KeyUpHandler
-	keyDownHandler      KeyDownHandler
-	clickedHandler      ClickedHandler
+	id                   int
+	t                    string
+	name                 string
+	rect                 *Rect
+	pointerDown          bool
+	visible              bool
+	state                string
+	parent               *Widget
+	text                 string
+	tag                  string
+	tips                 string
+	enable               bool
+	checkEnable          CheckEnable
+	removedHandler       RemovedHandler
+	children             []*Widget
+	point                *Point
+	cursor               string
+	imageDisplay         int
+	borderStyle          int
+	border               int
+	themeType            string
+	selected             bool
+	selectable           bool
+	needRelayout         bool
+	isScrollView         bool
+	xOffset              int
+	yOffset              int
+	target               *Widget
+	inputTips            string
+	leftMargin           int
+	editing              bool
+	userData             interface{}
+	onMoved              OnMovedHandler
+	stateChangedHandler  StateChangedHandler
+	onSized              OnResizedHandler
+	contextMenuHandler   ContextMenuHandler
+	keyUpHandler         KeyUpHandler
+	keyDownHandler       KeyDownHandler
+	clickedHandler       ClickedHandler
 	doubleClickedHandler DoubleClickedHandler
-	wheelHandler 				WheelHandler
-	lineWidth           int
-	roundRadius         int
-	theme               map[string]*ThemeStyle
-	onBeforePaint  OnBeforePaintHandler
-	onAfterPaint	 OnAfterPaintHandler
-	paintFocusLater bool
+	wheelHandler         WheelHandler
+	lineWidth            int
+	roundRadius          int
+	theme                map[string]*ThemeStyle
+	onBeforePaint        OnBeforePaintHandler
+	onAfterPaint         OnAfterPaintHandler
+	paintFocusLater      bool
 }
 
 func NewWidget(parent *Widget, x, y, w, h float32) *Widget {
@@ -860,9 +861,9 @@ func (w *Widget) setRoundRadius(roundRadius int) *Widget {
 
 func (w *Widget) ensureTheme() *Widget {
 	if len(w.themeType) {
-		w.theme = ThemeManager.get(w.themeType)
+		w.theme = GetThemeManagerInstance().get(w.themeType)
 	} else {
-		w.theme = ThemeManager.get(w.t)
+		w.theme = GetThemeManagerInstance().get(w.t)
 	}
 
 	return w
@@ -994,7 +995,7 @@ func (w *Widget) paintBackgroundColor(context dom.CanvasRenderingContext2D, styl
 	context.BeginPath()
 	if w.roundRadius || style.roundRadius {
 		roundRadius := math.Min((dst.h>>1)-1, style.roundRadius)
-		drawRoundRect(context, dst.w, dst.h,, roundRadius)
+		utils.DrawRoundRect(context, dst.w, dst.h, roundRadius)
 	} else {
 		context.Rect(0, 0, dst.w, dst.h)
 	}
@@ -1039,7 +1040,7 @@ func (w *Widget) paintBackgroundColor(context dom.CanvasRenderingContext2D, styl
 	return
 }
 
-func (w *Widget) paintSelf(context dom.CanvasRenderingContext2D) *Widget{
+func (w *Widget) paintSelf(context dom.CanvasRenderingContext2D) *Widget {
 	return w
 }
 
@@ -1152,7 +1153,7 @@ func (w *Widget) show(visible bool) {
 	return w
 }
 
-func (w *Widget) showAll(visible bool) *Widget{
+func (w *Widget) showAll(visible bool) *Widget {
 	w.show(visible)
 	for _, child := range w.children {
 		child.showAll(visible)
@@ -1165,7 +1166,7 @@ func (w *Widget) showAll(visible bool) *Widget{
 	return w
 }
 
-func (w *Widget) selectAllChildren(selected bool) *Widget{
+func (w *Widget) selectAllChildren(selected bool) *Widget {
 	for _, child := range w.children {
 		if child.checkable {
 			child.setChecked(selected)
@@ -1275,7 +1276,7 @@ func (w *Widget) onPoingterUp(point *Point) bool {
 	}
 
 	if w.isClicked() {
-		defer func () {
+		defer func() {
 			if err := recover(); err != nil {
 				fmt.Println(err)
 			}
@@ -1399,8 +1400,8 @@ func getCanvas(x, y, w, h, zIndex int) dom.HTMLCanvasElement {
 	var canvas dom.HTMLCanvasElement
 
 	if len(canvasPool) {
-		canvas = canvasPool[canvas.Length - 1]
-		canvasPool = append(canvasPool[:canvas.Length - 1])
+		canvas = canvasPool[canvas.Length-1]
+		canvasPool = append(canvasPool[:canvas.Length-1])
 	} else {
 		canvas = dom.Document.CreateElement("canvas")
 	}
@@ -1413,7 +1414,7 @@ func getCanvas(x, y, w, h, zIndex int) dom.HTMLCanvasElement {
 	canvas.Style().SetProperty("width", fmt.Sprintf("%dpx", w))
 	canvas.Style().SetProperty("height", fmt.Sprintf("%dpx", h))
 	canvas.Style().SetProperty("zIndex", zIndex)
-	
+
 	return
 }
 

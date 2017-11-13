@@ -41,7 +41,7 @@ type WindowManager struct {
 
 var manager = &WindowManager{}
 
-func NewWindowManager(app *Application, canvas *dom.HTMLCanvasElement, eventElement *dom.HTMLElement) *WindowManager {
+func NewWindowManager(app *Application, canvas *dom.HTMLCanvasElement, eventElement *dom.HTMLCanvasElement) *WindowManager {
 	SetEventsConsumer(manager, eventElement)
 	return manager.init(app, canvas)
 }

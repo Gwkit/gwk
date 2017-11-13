@@ -14,140 +14,76 @@ type ThemeFont struct {
 	weight string
 }
 
-type ThemeStyle struct {
-	font           string
-	fillColor      string
-	textColor      string
-	lineColor      string
-	fontSize       int
-	bgImage        *Image
-	fgImage        *Image
-	bgImageTips    *Image
-	checkedImage   *Image
-	uncheckedImage *Image
-}
-
-func NewThemeStyle(font, fillColor, textColor, lineColor, bgImage string) *ThemeStyle {
-	style := &ThemeStyle{}
-
-	if font {
-		style.font = font
-	}
-
-	if bgImage {
-		style.bgImage = bgImage
-	}
-
-	if fillColor {
-		style.fillColor = fillColor
-	}
-
-	if textColor {
-		style.textColor = textColor
-	}
-
-	if lineColor {
-		style.lineColor = lineColor
-	}
-
-	return style
-}
-
-type Theme struct {
-	normal   *ThemeStyle
-	active   *ThemeStyle
-	over     *ThemeStyle
-	disable  *ThemeStyle
-	selected *ThemeStyle
-}
-
-func NewTheme() *Theme {
-	theme := &Theme{
-		NewThemeStyle("13pt bold sans-serif ", "", "#000000", "#000000", ""),
-		NewThemeStyle("13pt bold sans-serif ", "", "#000000", "#000000", ""),
-		NewThemeStyle("13pt bold sans-serif ", "", "#000000", "#000000", ""),
-		NewThemeStyle("13pt bold sans-serif ", "", "Gray", "", ""),
-		NewThemeStyle("13pt bold sans-serif ", "", "Gray", "", ""),
-	}
-
-	return theme
-}
-
 type ThemeManager struct {
-	themes       map[string]interface{}
+	themes       map[string]Theme
 	themesLoaded bool
 	imagesURL    string
-	defaultTheme *Theme
+	defaultTheme Theme
 	themeURL     string
-	imagesCache  map[string]Image
+	imagesCache  map[string]*Image
 }
 
 func NewThemeManager() *ThemeManager {
 	manager := &ThemeManager{}
 	manager.defaultTheme = NewTheme()
 	manager.themeURL = "/ide/theme/default/theme.json"
-	manager.themes = make(map[string]interface{})
+	// manager.themes = make(map[string]interface{})
 
 	return manager
 }
 
-type WidgetStates struct {
-	stateNormal struct {
-		fillColor      string
-		bgImage        string
-		font           string
-		textColor      string
-		lineColor      string
-		bgImage        interface{}
-		fgImage        interface{}
-		bgImageTips    interface{}
-		checkedImage   interface{}
-		uncheckedImage interface{}
-	} `json:state-normal`
-	stateOver struct {
-		fillColor      string
-		bgImage        string
-		font           string
-		textColor      string
-		lineColor      string
-		bgImage        interface{}
-		fgImage        interface{}
-		bgImageTips    interface{}
-		checkedImage   interface{}
-		uncheckedImage interface{}
-	} `json:state-over`
-	stateActive struct {
-		fillColor      string
-		bgImage        string
-		font           string
-		textColor      string
-		lineColor      string
-		bgImage        interface{}
-		fgImage        interface{}
-		bgImageTips    interface{}
-		checkedImage   interface{}
-		uncheckedImage interface{}
-	} `json:state-active`
-	stateDisable struct {
-		fillColor      string
-		bgImage        string
-		font           string
-		textColor      string
-		lineColor      string
-		bgImage        interface{}
-		fgImage        interface{}
-		bgImageTips    interface{}
-		checkedImage   interface{}
-		uncheckedImage interface{}
-	} `json:state-disable`
+type ThemeStyle struct {
+	fillColor      string
+	font           string
+	fontSize       int
+	textColor      string
+	lineColor      string
+	bgImage        interface{}
+	fgImage        interface{}
+	bgImageTips    interface{}
+	checkedImage   interface{}
+	uncheckedImage interface{}
+}
+
+func NewThemeStyle(font, fillColor, textColor, lineColor string) *ThemeStyle {
+	style := &ThemeStyle{}
+
+	if len(font) != 0 {
+		style.font = font
+	}
+
+	if len(fillColor) != 0 {
+		style.fillColor = fillColor
+	}
+
+	if len(textColor) != 0 {
+		style.textColor = textColor
+	}
+
+	if len(lineColor) != 0 {
+		style.lineColor = lineColor
+	}
+
+	return style
+}
+
+type Theme map[string]*ThemeStyle
+
+func NewTheme() Theme {
+	theme := make(Theme)
+	theme[STATE_NORMAL] = NewThemeStyle("13pt bold sans-serif ", "", "#000000", "#000000")
+	theme[STATE_ACTIVE] = NewThemeStyle("13pt bold sans-serif ", "", "#000000", "#000000")
+	theme[STATE_OVER] = NewThemeStyle("13pt bold sans-serif ", "", "#000000", "#000000")
+	theme[STATE_DISABLE] = NewThemeStyle("13pt bold sans-serif ", "", "Gray", "")
+	theme[STATE_SELECTED] = NewThemeStyle("13pt bold sans-serif ", "", "Gray", "")
+
+	return theme
 }
 
 type ThemeJson struct {
 	imagesURL string
-	widgets   struct {
-		window WidgetStates
-	}
-	global struct {
+	widgets   map[string]Theme
+	global    struct {
 		font struct {
 			windows ThemeFont
 			linux   ThemeFont
@@ -162,11 +98,11 @@ func (manager *ThemeManager) setImagesURL(imagesURL string) {
 	return
 }
 
-func (manager *ThemeManager) getIconImageURL() {
+func (manager *ThemeManager) getIconImageURL() string {
 	return manager.imagesURL
 }
 
-func (manager *ThemeManager) getImageURL() {
+func (manager *ThemeManager) getImageURL() string {
 	return manager.imagesURL
 }
 
@@ -191,29 +127,30 @@ func (manager *ThemeManager) getBgImage(name string) *Image {
 }
 
 func (manager *ThemeManager) getImage(name string) *Image {
-	if _, ok := manager["imagesURL"]; !ok {
+	if len(manager.imagesURL) == 0 {
 		return nil
 	}
 
-	url := manager["imagesURL"] + "#" + name
+	url := manager.imagesURL + "#" + name
+
 	return manager.createImage(url)
 }
 
-func (manager *ThemeManager) setTheme(theme) {
+func (manager *ThemeManager) setTheme(theme *Theme) {
 	//TODO
 }
 
 func (manager *ThemeManager) getDefaultFont(themeJson *ThemeJson) *ThemeFont {
-	return themeJson.global.font.macosx
+	return &themeJson.global.font.macosx
 }
 
-func (manager *ThemeManager) applyDefaultFont(style *ThemeStyle) {
+func (manager *ThemeManager) applyDefaultFont(style *ThemeStyle, defaultFont *ThemeFont) {
 	famlily := "sans"
 	size := 10
 	weight := "normal"
 
 	style.fontSize = 10
-	style.font = fmt.Sprintf("%d %dpx %s", weight, size, famlily)
+	style.font = fmt.Sprintf("%s %dpx %s", weight, size, famlily)
 
 	return
 }
@@ -221,7 +158,7 @@ func (manager *ThemeManager) applyDefaultFont(style *ThemeStyle) {
 func (manager *ThemeManager) loadTheme(themeURL string, themeJson *ThemeJson) {
 	dir := path.Dir(themeURL)
 	imagesURL := dir + "/"
-	if themeJson.imagesURL {
+	if len(themeJson.imagesURL) > 0 {
 		imagesURL += themeJson.imagesURL
 	} else {
 		imagesURL += "images.json"
@@ -233,20 +170,20 @@ func (manager *ThemeManager) loadTheme(themeURL string, themeJson *ThemeJson) {
 
 	for _, widgetTheme := range widgetsTheme {
 		for _, style := range widgetTheme {
-			if style.bgImage {
-				style.bgImage = manager.getImage(style.bgImage)
+			if style.bgImage != nil {
+				style.bgImage = manager.getImage(style.bgImage.(string))
 			}
-			if style.fgImage {
-				style.fgImage = manager.getImage(style.fgImage)
+			if style.fgImage != nil {
+				style.fgImage = manager.getImage(style.fgImage.(string))
 			}
-			if style.bgImageTips {
-				style.bgImageTips = manager.getImage(style.bgImageTips)
+			if style.bgImageTips != nil {
+				style.bgImageTips = manager.getImage(style.bgImageTips.(string))
 			}
-			if style.checkedImage {
-				style.checkedImage = manager.getImage(style.checkedImage)
+			if style.checkedImage != nil {
+				style.checkedImage = manager.getImage(style.checkedImage.(string))
 			}
-			if style.uncheckedImage {
-				style.uncheckedImage = manager.getImage(style.uncheckedImage)
+			if style.uncheckedImage != nil {
+				style.uncheckedImage = manager.getImage(style.uncheckedImage.(string))
 			}
 			manager.applyDefaultFont(style, font)
 		}
@@ -259,11 +196,11 @@ func (manager *ThemeManager) loadTheme(themeURL string, themeJson *ThemeJson) {
 }
 
 func (manager *ThemeManager) getThemeURL() string {
-	return manager["themeURL"]
+	return manager.themeURL
 }
 
 func (manager *ThemeManager) loadThemeURL(url string) {
-	if !url {
+	if url != "" {
 		url := manager.getThemeURL()
 	}
 
@@ -276,7 +213,7 @@ func (manager *ThemeManager) loadThemeURL(url string) {
 		json.NewDecoder(resp.Body).Decode(themeJSON)
 		manager.loadTheme(url, themeJSON)
 		wm := GetWindowManagerInstance()
-		if wm {
+		if wm != nil {
 			wm.postRedraw()
 		}
 	}
@@ -292,17 +229,17 @@ func (manager *ThemeManager) exist(name string) bool {
 
 func (manager *ThemeManager) dump() {
 	s, _ := json.Marshal(manager.themes)
-	fmt.Printf(s)
+	fmt.Printf(string(s))
 
 	return
 }
 
-func (manager *ThemeManager) get(name string, noDefault bool) *Theme {
-	theme := manager.themes[name]
+func (manager *ThemeManager) get(name string, noDefault bool) Theme {
+	theme, ok := manager.themes[name]
 
-	if !theme {
+	if !ok {
 		if noDefault {
-			manager.themes[name] = NewThemeManager()
+			manager.themes[name] = NewTheme()
 			theme = manager.themes[name]
 		} else {
 			theme = manager.defaultTheme
@@ -313,7 +250,7 @@ func (manager *ThemeManager) get(name string, noDefault bool) *Theme {
 }
 
 func (manager *ThemeManager) set(name, state, font, textColor, fillColor, lineColor, bgImage string) {
-	if !state {
+	if state == "" {
 		manager.setOneState(name, "normal", font, textColor, fillColor, lineColor, bgImage)
 		manager.setOneState(name, "active", font, textColor, fillColor, lineColor, bgImage)
 		manager.setOneState(name, "over", font, textColor, fillColor, lineColor, bgImage)
@@ -327,28 +264,38 @@ func (manager *ThemeManager) set(name, state, font, textColor, fillColor, lineCo
 }
 
 func (manager *ThemeManager) setOneState(name, state, font, textColor, fillColor, lineColor, bgImage string) {
-	theme := manager.themes[name]
+	theme, ok := manager.themes[name]
 
-	if !theme {
-		theme := NewTheme()
+	if !ok {
+		theme = NewTheme()
 		manager.themes[name] = theme
 	}
 
-	if font {
+	if font != "" {
 		theme[state].font = font
 	}
 
-	if textColor {
+	if textColor != "" {
 		theme[state].textColor = textColor
 	}
 
-	if lineColor {
+	if lineColor != "" {
 		theme[state].lineColor = lineColor
 	}
 
-	if bgImage {
+	if bgImage != "" {
 		theme[state].bgImage = bgImage
 	}
 
 	return
+}
+
+var themeManager *ThemeManager
+
+func GetThemeManagerInstance() *ThemeManager {
+	if themeManager == nil {
+		themeManager = NewThemeManager()
+	}
+
+	return themeManager
 }

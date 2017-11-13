@@ -7,29 +7,31 @@ import (
 )
 
 var (
-	TYPE_GENERAL       = 0
-	TYPE_WEBAPP        = 1
-	TYPE_PREVIEW       = 2
-	TYPE_PC_VIEWER     = 3
-	TYPE_PC_EDITOR     = 4
-	TYPE_MOBILE_EDITOR = 5
-	TYPE_INLINE_EDITOR = 6
+	TYPE_GENERAL       = "general"
+	TYPE_WEBAPP        = "webapp"
+	TYPE_PREVIEW       = "preview"
+	TYPE_PC_VIEWER     = "pc_viewer"
+	TYPE_PC_EDITOR     = "pc_editor"
+	TYPE_MOBILE_EDITOR = "mobile_editor"
+	TYPE_INLINE_EDITOR = "inline_editor"
 )
 
 type Application struct {
 	win       *Window
 	view      interface{}
 	t         string
+	canvasID  string
 	minHeight int
-	canvas    dom.HTMLCanvasElement
+	canvas    *dom.HTMLCanvasElement
 	manager   *WindowManager
 }
 
-func NewApplication(t string) *Application {
+func NewApplication(canvasID, t string) *Application {
 	app := &Application{}
 
 	app.t = t
-	app.canvas = rt.GetRTInstance().GetMainCanvas()
+	app.canvasID = canvasID
+	app.canvas = rt.GetRTInstance().GetMainCanvas(canvasID)
 	app.adjustCanvasSize()
 	app.manager = NewWindowManager(app, app.canvas, app.canvas)
 
@@ -61,7 +63,7 @@ func (app *Application) adjustCanvasSize() {
 		h = height
 	}
 
-	h = math.Max(h, app.minHeight)
+	h = int(math.Max(float64(h), float64(app.minHeight)))
 
 	app.resizeCanvasTo(w, h)
 

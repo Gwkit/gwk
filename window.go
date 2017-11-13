@@ -21,14 +21,17 @@ type Window struct {
 	lastPosition Position
 }
 
-func NewWindow() *Window {
-	//TODO
+func NewWindow(manager *WindowManager, x, y, w, h float32) *Window {
 	window := &Window{
-		NewWidget(),
-		t: TYPE_WINDOW,
+		Widget: NewWidget(nil, x, y, w, h),
+		t:      TYPE_WINDOW,
 	}
 
-	window.manager = GetWindowManagerInstance()
+	if manager {
+		window.manager = manager
+	} else {
+		window.manager = GetWindowManagerInstance()
+	}
 
 	return window
 }

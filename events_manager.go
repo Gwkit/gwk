@@ -25,7 +25,7 @@ func NewEventsManager() *EventsManager {
 	return em
 }
 
-func (em *EventsManager) setEventsConsumer(eventsConsumer *WindowManager, element dom.HTMLElement) {
+func (em *EventsManager) setEventsConsumer(eventsConsumer *WindowManager, element dom.HTMLCanvasElement) {
 	if em.eventsConsumer == nil {
 		em.eventsConsumer = eventsConsumer
 		em.addEventListeners(element)

@@ -31,9 +31,9 @@ func (rt *GwkRT) GetViewPort() (int, int) {
 	return width, height
 }
 
-func (rt *GwkRT) GetMainCanvas(id string) dom.HTMLCanvasElement {
+func (rt *GwkRT) GetMainCanvas(id string) *dom.HTMLCanvasElement {
 	if rt.canvas != nil {
-		return *rt.canvas
+		return rt.canvas
 	}
 
 	if len(id) == 0 {
@@ -51,7 +51,7 @@ func (rt *GwkRT) GetMainCanvas(id string) dom.HTMLCanvasElement {
 
 	rt.canvas = canvas
 
-	return *canvas
+	return canvas
 }
 
 func (rt *GwkRT) moveMainCanvas(x, y int) {
