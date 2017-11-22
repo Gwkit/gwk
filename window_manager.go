@@ -2,6 +2,8 @@ package gwk
 
 import (
 	"fmt"
+	"github.com/Luncher/gwk/pkg/event"
+	"github.com/Luncher/gwk/pkg/structs"
 	"honnef.co/go/js/dom"
 	"math"
 	"strconv"
@@ -23,8 +25,8 @@ type WindowManager struct {
 	windows            []*Window
 	grabWindows        []*Window
 	eventLogging       bool
-	pointerDownPoint   *Point
-	lastPointerPoint   *Point
+	pointerDownPoint   *structs.Point
+	lastPointerPoint   *structs.Point
 	enablePaint        bool
 	beforeDrawHandlers []BeforeDrawHandler
 	lastUpdateTime     time.Time
@@ -43,7 +45,7 @@ type WindowManager struct {
 var manager = &WindowManager{}
 
 func NewWindowManager(app *Application, canvas dom.HTMLCanvasElement, eventElement dom.HTMLCanvasElement) *WindowManager {
-	GetEventsManagerInstance().setEventsConsumer(manager, eventElement)
+	event.SetEventsConsumer(event.EventConsumer(manager), eventElement)
 	return manager.init(app, canvas)
 }
 
@@ -64,7 +66,7 @@ func (manager *WindowManager) getApp() *Application {
 	return manager.app
 }
 
-func (manager *WindowManager) onMultiTouch(action string, points []Point, event dom.Event) {
+func (manager *WindowManager) onMultiTouch(action string, points []structs.Point, event dom.Event) {
 	for _, point := range points {
 		manager.translatePoint(&point)
 	}
@@ -72,11 +74,15 @@ func (manager *WindowManager) onMultiTouch(action string, points []Point, event 
 	return
 }
 
-func (manager *WindowManager) preprocessEvent(t string, e dom.Event) bool {
+func (manager *WindowManager) PreprocessEvent(t string, e dom.Event) bool {
 	//TODO
 	// manager.currentEvent = e.originalEvent ? e.originalEvent : e
 	// manager.currentEvent = e.originalEvent ? e.originalEvent : e
 	return true
+}
+
+func (manager *WindowManager) GetInputScale() (x, y float32) {
+	return manager.xInputScale, manager.yInputScale
 }
 
 func (manager *WindowManager) getCanvas() *dom.HTMLCanvasElement {
@@ -91,7 +97,7 @@ func (manager *WindowManager) getHeight() int {
 	return manager.h
 }
 
-func (manager *WindowManager) findTargetWin(point *Point) *Window {
+func (manager *WindowManager) findTargetWin(point *structs.Point) *Window {
 	for _, window := range manager.grabWindows {
 		if window.visible {
 			return window
@@ -135,26 +141,26 @@ func (manager *WindowManager) ungrab(window *Window) {
 	return
 }
 
-func (manager *WindowManager) onDoubleClick(point *Point) {
+func (manager *WindowManager) OnDoubleClick(point *structs.Point) {
 	manager.translatePoint(point)
 	manager.target = manager.findTargetWin(point)
 
 	if manager.target != nil {
 		manager.target.onDoubleClick(point)
 	} else {
-		fmt.Printf("Window Manager: no target for x=%d, y=%d", point.x, point.y)
+		fmt.Printf("Window Manager: no target for x=%d, y=%d", point.X, point.Y)
 	}
 
 	return
 }
 
-func (manager *WindowManager) onLongPress(point *Point) {
+func (manager *WindowManager) onLongPress(point *structs.Point) {
 	manager.target = manager.findTargetWin(point)
 
 	if manager.target != nil {
 		manager.target.onLongPress(point)
 	} else {
-		fmt.Printf("Window Manager: no target for x=%d, y=%d", point.x, point.y)
+		fmt.Printf("Window Manager: no target for x=%d, y=%d", point.X, point.Y)
 	}
 
 	return
@@ -178,27 +184,27 @@ func (manager *WindowManager) getInputScale() (x, y float32) {
 	return manager.xInputScale, manager.yInputScale
 }
 
-func (manager *WindowManager) translatePoint(point *Point) *Point {
+func (manager *WindowManager) translatePoint(point *structs.Point) *structs.Point {
 	if manager.xInputOffset != 0 {
-		point.x -= manager.xInputOffset
+		point.X -= manager.xInputOffset
 	}
 
 	if manager.yInputOffset != 0 {
-		point.y -= manager.yInputOffset
+		point.Y -= manager.yInputOffset
 	}
 
 	if manager.xInputScale != 0.0 {
-		point.x = int(math.Ceil(float64(float32(point.x) * manager.xInputScale)))
+		point.X = int(math.Ceil(float64(float32(point.X) * manager.xInputScale)))
 	}
 
 	if manager.yInputScale != 0.0 {
-		point.y = int(math.Ceil(float64(float32(point.y) * manager.yInputScale)))
+		point.Y = int(math.Ceil(float64(float32(point.Y) * manager.yInputScale)))
 	}
 
 	return point
 }
 
-func (manager *WindowManager) onPointerDown(point *Point) {
+func (manager *WindowManager) OnPointerDown(point *structs.Point) {
 	manager.translatePoint(point)
 	manager.target = manager.findTargetWin(point)
 
@@ -209,26 +215,26 @@ func (manager *WindowManager) onPointerDown(point *Point) {
 	}
 
 	manager.pointerDown = true
-	manager.pointerDownPoint.x = point.x
-	manager.pointerDownPoint.y = point.y
-	manager.lastPointerPoint.x = point.x
-	manager.lastPointerPoint.y = point.y
+	manager.pointerDownPoint.X = point.X
+	manager.pointerDownPoint.Y = point.Y
+	manager.lastPointerPoint.X = point.X
+	manager.lastPointerPoint.Y = point.Y
 
 	if manager.target != nil {
 		manager.target.onPointerDown(point)
 	} else {
-		fmt.Printf("Window Manager: no target for x=%d y=%d", point.x, point.y)
+		fmt.Printf("Window Manager: no target for x=%d y=%d", point.X, point.Y)
 	}
 
 	return
 }
 
-func (manager *WindowManager) onPointerMove(point *Point) {
+func (manager *WindowManager) OnPointerMove(point *structs.Point) {
 	manager.translatePoint(point)
 	target := manager.findTargetWin(point)
 
-	manager.lastPointerPoint.x = point.x
-	manager.lastPointerPoint.y = point.y
+	manager.lastPointerPoint.X = point.X
+	manager.lastPointerPoint.Y = point.Y
 
 	if manager.target != nil && manager.target != target {
 		manager.target.onPointerMove(point)
@@ -241,7 +247,7 @@ func (manager *WindowManager) onPointerMove(point *Point) {
 	return
 }
 
-func (manager *WindowManager) onPointerUp(point *Point) {
+func (manager *WindowManager) OnPointerUp(point *structs.Point) {
 	manager.translatePoint(point)
 	point = manager.lastPointerPoint
 	manager.target = manager.findTargetWin(point)
@@ -249,14 +255,14 @@ func (manager *WindowManager) onPointerUp(point *Point) {
 	if manager.target != nil {
 		manager.target.onPointerUp(point)
 	} else {
-		fmt.Printf("Window Manager: no target for x=%d y=%d", point.x, point.y)
+		fmt.Printf("Window Manager: no target for x=%d y=%d", point.X, point.Y)
 	}
 	manager.pointerDown = false
 
 	return
 }
 
-func (manager *WindowManager) getLastPointerPoint() *Point {
+func (manager *WindowManager) getLastPointerPoint() *structs.Point {
 	return manager.lastPointerPoint
 }
 
@@ -265,8 +271,8 @@ func (manager *WindowManager) isPointerDown() bool {
 }
 
 func (manager *WindowManager) isClicked() bool {
-	dx := math.Abs(float64(manager.lastPointerPoint.x - manager.pointerDownPoint.x))
-	dy := math.Abs(float64(manager.lastPointerPoint.y - manager.pointerDownPoint.y))
+	dx := math.Abs(float64(manager.lastPointerPoint.X - manager.pointerDownPoint.X))
+	dy := math.Abs(float64(manager.lastPointerPoint.Y - manager.pointerDownPoint.Y))
 
 	return (dx < 10 && dy < 10)
 }
@@ -289,21 +295,21 @@ func (manager *WindowManager) isAltDown() bool {
 	return false
 }
 
-func (manager *WindowManager) onContextMenu(point *Point) {
+func (manager *WindowManager) OnContextMenu(point *structs.Point) {
 	manager.target = manager.findTargetWin(point)
 
 	if manager.target != nil {
 		manager.target.onContextMenu(point)
 	} else {
-		fmt.Printf("Window Manager: no target for x=%d y=%d", point.x, point.y)
+		fmt.Printf("Window Manager: no target for x=%d y=%d", point.X, point.Y)
 	}
 
 	return
 }
 
-func (manager *WindowManager) onKeyDown(code int) {
+func (manager *WindowManager) OnKeyDown(code int) {
 	if manager.target == nil {
-		manager.target = manager.findTargetWin(&Point{x: 50, y: 50})
+		manager.target = manager.findTargetWin(&structs.Point{X: 50, Y: 50})
 		fmt.Printf("onKeyDown findTargetWin=")
 		fmt.Println(manager.target)
 	}
@@ -315,7 +321,7 @@ func (manager *WindowManager) onKeyDown(code int) {
 	return
 }
 
-func (manager *WindowManager) onKeyUp(code int) {
+func (manager *WindowManager) OnKeyUp(code int) {
 	if manager.target != nil {
 		manager.target.onKeyUp(code)
 	}
@@ -323,24 +329,24 @@ func (manager *WindowManager) onKeyUp(code int) {
 	return
 }
 
-func (manager *WindowManager) onWheel(delta float64) bool {
+func (manager *WindowManager) OnWheel(delta float64) {
 	manager.postRedraw()
 
 	if manager.target == nil {
-		manager.target = manager.findTargetWin(&Point{x: 50, y: 50})
+		manager.target = manager.findTargetWin(&structs.Point{X: 50, Y: 50})
 		fmt.Printf("onWheel findTargetWin=")
 		fmt.Println(manager.target)
 	}
 
 	if manager.target != nil {
-		return manager.target.onWheel(delta)
+		manager.target.onWheel(delta)
 	}
 
-	return false
+	return
 }
 
 func (manager *WindowManager) dispatchPointerMoveOut() *WindowManager {
-	manager.onPointerMove(&Point{x: -1, y: -1})
+	manager.OnPointerMove(&structs.Point{X: -1, Y: -1})
 	manager.target = nil
 
 	return manager
@@ -466,7 +472,7 @@ func (manager *WindowManager) drawTips(context *dom.CanvasRenderingContext2D) {
 	p := tipsWidget.getPositionInView()
 
 	context.Save()
-	context.Translate(float64(p.x), float64(p.y))
+	context.Translate(float64(p.X), float64(p.Y))
 	context.BeginPath()
 	tipsWidget.drawTips(context)
 	context.Restore()

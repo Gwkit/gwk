@@ -2,6 +2,7 @@ package gwk
 
 import (
 	"github.com/Luncher/gwk/pkg/rt"
+	"github.com/Luncher/gwk/pkg/structs"
 	"honnef.co/go/js/dom"
 	"math"
 )
@@ -16,9 +17,9 @@ type Window struct {
 	onClosed     OnClosed
 	closeHandler CloseHandler
 	manager      *WindowManager
-	downPosition Position
-	upPosition   Position
-	lastPosition Position
+	downPosition structs.Position
+	upPosition   structs.Position
+	lastPosition structs.Position
 }
 
 func NewWindow(manager *WindowManager, x, y, w, h float32) *Window {
@@ -53,21 +54,21 @@ func (window *Window) moveToCenter() *Window {
 	var sw = math.Min(float64(window.manager.w), float64(width))
 	var sh = math.Min(float64(window.manager.h), float64(height))
 
-	var x = (int(sw) - window.rect.w) / 2
-	var y = (int(sh) - window.rect.h) / 2
+	var x = (int(sw) - window.rect.W) / 2
+	var y = (int(sh) - window.rect.H) / 2
 
-	window.rect.x = x
-	window.rect.y = y
+	window.rect.X = x
+	window.rect.Y = y
 
 	return window
 }
 
-func (window *Window) onPointerDown(point *Point) {
+func (window *Window) onPointerDown(point *structs.Point) {
 	window.pointerDown = true
-	window.downPosition.x = point.x
-	window.downPosition.y = point.y
-	window.lastPosition.x = point.x
-	window.lastPosition.y = point.y
+	window.downPosition.X = point.X
+	window.downPosition.Y = point.Y
+	window.lastPosition.X = point.X
+	window.lastPosition.Y = point.Y
 
 	if widget, ok := window.grabWidget.(Widget); ok {
 		widget.onPointerDown(point)
@@ -80,9 +81,9 @@ func (window *Window) onPointerDown(point *Point) {
 	return
 }
 
-func (window *Window) onPointerMove(point *Point) {
-	window.lastPosition.x = point.x
-	window.lastPosition.y = point.y
+func (window *Window) onPointerMove(point *structs.Point) {
+	window.lastPosition.X = point.X
+	window.lastPosition.Y = point.Y
 
 	if widget, ok := window.grabWidget.(Widget); ok {
 		widget.onPointerMove(point)
@@ -95,9 +96,9 @@ func (window *Window) onPointerMove(point *Point) {
 	return
 }
 
-func (window *Window) onPointerUp(point *Point) {
-	window.upPosition.x = point.x
-	window.upPosition.y = point.y
+func (window *Window) onPointerUp(point *structs.Point) {
+	window.upPosition.X = point.X
+	window.upPosition.Y = point.Y
 
 	if widget, ok := window.grabWidget.(Widget); ok {
 		widget.onPointerUp(point)
@@ -112,13 +113,13 @@ func (window *Window) onPointerUp(point *Point) {
 }
 
 func (window *Window) isClicked() bool {
-	dx := window.lastPosition.x - window.downPosition.x
-	dy := window.lastPosition.y - window.downPosition.y
+	dx := window.lastPosition.X - window.downPosition.X
+	dy := window.lastPosition.Y - window.downPosition.Y
 
 	return math.Abs(float64(dx)) < 5 && math.Abs(float64(dy)) < 5
 }
 
-func (window *Window) onContextMenu(point *Point) {
+func (window *Window) onContextMenu(point *structs.Point) {
 	if widget, ok := window.grabWidget.(Widget); ok {
 		widget.onContextMenu(point)
 	} else {
@@ -150,7 +151,7 @@ func (window *Window) onKeyUp(code int) {
 
 func (window *Window) beforePaint(ctx *dom.CanvasRenderingContext2D) {
 	ctx.BeginPath()
-	ctx.Rect(0, 0, float64(window.rect.w), float64(window.rect.h))
+	ctx.Rect(0, 0, float64(window.rect.W), float64(window.rect.H))
 	ctx.Clip()
 	ctx.BeginPath()
 }

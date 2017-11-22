@@ -2,13 +2,16 @@ package gwk
 
 import (
 	"fmt"
+	"github.com/Luncher/gwk/pkg/image"
+	"github.com/Luncher/gwk/pkg/structs"
+	"github.com/Luncher/gwk/pkg/theme"
 	"github.com/Luncher/gwk/pkg/utils"
 	"honnef.co/go/js/dom"
 	"math"
 	"strconv"
 )
 
-var (
+const (
 	STATE_NORMAL           = "state-normal"
 	STATE_ACTIVE           = "state-active"
 	STATE_OVER             = "state-over"
@@ -18,7 +21,7 @@ var (
 	STATE_NORMAL_CURRENT   = "state-normal-current"
 )
 
-var (
+const (
 	TYPE_NONE                = 0
 	TYPE_USER                = 13
 	TYPE_FRAME               = "frame"
@@ -91,7 +94,7 @@ var (
 	TYPE_ICON_BUTTON         = "icon-button"
 )
 
-var (
+const (
 	BORDER_STYLE_NONE   = 0
 	BORDER_STYLE_LEFT   = 1
 	BORDER_STYLE_RIGHT  = 2
@@ -107,10 +110,10 @@ type WidgeVisit func(*Widget)
 type StateChangedHandler func(state string)
 type OnMovedHandler func()
 type OnResizedHandler func()
-type ContextMenuHandler func(*Point)
-type ClickedHandler func(*Widget, *Point)
-type DoubleClickedHandler func(*Point)
-type LongPressHandler func(*Point)
+type ContextMenuHandler func(*structs.Point)
+type ClickedHandler func(*Widget, *structs.Point)
+type DoubleClickedHandler func(*structs.Point)
+type LongPressHandler func(*structs.Point)
 type KeyDownHandler func(int)
 type KeyUpHandler func(int)
 type OnBeforePaintHandler func(*dom.CanvasRenderingContext2D)
@@ -121,7 +124,7 @@ type Widget struct {
 	id                   string
 	t                    string
 	name                 string
-	rect                 *Rect
+	rect                 *structs.Rect
 	pointerDown          bool
 	visible              bool
 	state                string
@@ -135,7 +138,7 @@ type Widget struct {
 	checkEnable          CheckEnable
 	removedHandler       RemovedHandler
 	children             []*Widget
-	point                *Point
+	point                *structs.Point
 	cursor               string
 	imageDisplay         int
 	borderStyle          int
@@ -164,7 +167,7 @@ type Widget struct {
 	wheelHandler         WheelHandler
 	lineWidth            int
 	roundRadius          int
-	theme                map[string]*ThemeStyle
+	theme                *theme.ThemeWidget
 	onBeforePaint        OnBeforePaintHandler
 	onAfterPaint         OnAfterPaintHandler
 	paintFocusLater      bool
@@ -175,8 +178,8 @@ func NewWidget(parent *Widget, x, y, w, h float32) *Widget {
 		parent:       parent,
 		cursor:       "default",
 		borderStyle:  BORDER_STYLE_ALL,
-		imageDisplay: DISPLAY_9PATCH,
-		rect:         &Rect{x: int(x), y: int(y), w: int(w), h: int(h)},
+		imageDisplay: image.DISPLAY_9PATCH,
+		rect:         &structs.Rect{X: int(x), Y: int(y), W: int(w), H: int(h)},
 	}
 
 	widget.setState(STATE_NORMAL, false)
@@ -187,23 +190,23 @@ func NewWidget(parent *Widget, x, y, w, h float32) *Widget {
 			border = parent.border
 		}
 
-		pw := parent.rect.w - 2*border
-		ph := parent.rect.h - 2*border
+		pw := parent.rect.W - 2*border
+		ph := parent.rect.H - 2*border
 
 		if x > 0 && x < 1 {
-			widget.rect.x = int(float32(pw)*x + float32(border))
+			widget.rect.X = int(float32(pw)*x + float32(border))
 		}
 
 		if w > 0 && w <= 1 {
-			widget.rect.w = int(float32(pw) * w)
+			widget.rect.W = int(float32(pw) * w)
 		}
 
 		if y > 0 && y < 1 {
-			widget.rect.y = int(float32(ph)*y + float32(border))
+			widget.rect.Y = int(float32(ph)*y + float32(border))
 		}
 
 		if h > 0 && h <= 1 {
-			widget.rect.h = int(float32(ph) * w)
+			widget.rect.H = int(float32(ph) * w)
 		}
 
 		parent.appendChild(widget)
@@ -294,7 +297,7 @@ func (w *Widget) getCanvas() *dom.HTMLCanvasElement {
 	return GetWindowManagerInstance().getCanvas()
 }
 
-func (w *Widget) getLastPointerPoint() *Point {
+func (w *Widget) getLastPointerPoint() *structs.Point {
 	return GetWindowManagerInstance().getLastPointerPoint()
 }
 
@@ -319,25 +322,25 @@ func (w *Widget) getParent() *Widget {
 }
 
 func (w *Widget) getX() int {
-	return w.rect.x
+	return w.rect.X
 }
 
 func (w *Widget) getY() int {
-	return w.rect.y
+	return w.rect.Y
 }
 
 func (w *Widget) getWidth() int {
-	return w.rect.w
+	return w.rect.W
 }
 
 func (w *Widget) getHeight() int {
-	return w.rect.h
+	return w.rect.H
 }
 
-func (w *Widget) getPositionInView() *Point {
+func (w *Widget) getPositionInView() *structs.Point {
 	x := w.getX()
 	y := w.getY()
-	point := &Point{}
+	point := &structs.Point{}
 
 	for iter := w.getParent(); iter != nil; iter = iter.getParent() {
 		x += iter.getX()
@@ -348,26 +351,26 @@ func (w *Widget) getPositionInView() *Point {
 		}
 	}
 
-	point.x = x
-	point.y = y
+	point.X = x
+	point.Y = y
 
 	return point
 }
 
-func (w *Widget) getAbsPosition() *Point {
-	x := w.rect.x
-	y := w.rect.y
+func (w *Widget) getAbsPosition() *structs.Point {
+	x := w.rect.X
+	y := w.rect.Y
 
 	for parent := w.parent; parent != nil; parent = parent.parent {
 		x += parent.getX()
 		y += parent.getY()
 	}
 
-	return &Point{x, y}
+	return &structs.Point{X: x, Y: y}
 }
 
-func (w *Widget) getPositionInWindow() *Point {
-	point := &Point{}
+func (w *Widget) getPositionInWindow() *structs.Point {
+	point := &structs.Point{}
 
 	if w.parent != nil {
 		for iter := w; iter != nil; iter = iter.parent {
@@ -375,18 +378,18 @@ func (w *Widget) getPositionInWindow() *Point {
 				break
 			}
 
-			point.x += iter.rect.x
-			point.y += iter.rect.y
+			point.X += iter.rect.X
+			point.Y += iter.rect.Y
 		}
 	}
 
 	return point
 }
 
-func (w *Widget) translatePoint(point *Point) *Point {
+func (w *Widget) translatePoint(point *structs.Point) *structs.Point {
 	p := w.getAbsPosition()
 
-	return &Point{x: point.x - p.x, y: point.y - p.y}
+	return &structs.Point{X: point.X - p.X, Y: point.Y - p.Y}
 }
 
 func (w *Widget) postRedrawAll() {
@@ -401,14 +404,14 @@ func (w *Widget) PostRedraw() {
 	return
 }
 
-func (w *Widget) redraw(rect *Rect) {
+func (w *Widget) redraw(rect *structs.Rect) {
 	// p := w.getAbsPosition()
 
 	// if rect == nil {
-	// 	rect = &Rect{x: 0, y: 0, w: w.rect.w, h: w.rect.h}
+	// 	rect = &Rect{x: 0, y: 0, w: w.rect.W, h: w.rect.H}
 	// }
-	// rect.x = p.x + rect.x
-	// rect.y = p.y + rect.y
+	// rect.X = p.x + rect.X
+	// rect.Y = p.y + rect.Y
 
 	// GetWindowManagerInstance().redraw(rect)
 	//TODO
@@ -417,11 +420,11 @@ func (w *Widget) redraw(rect *Rect) {
 	return
 }
 
-func (w *Widget) isPointIn(point *Point) bool {
+func (w *Widget) isPointIn(point *structs.Point) bool {
 	return isPointInRect(point, w.rect)
 }
 
-func (w *Widget) findTargetWidgetEx(point *Point, recursive bool) *Widget {
+func (w *Widget) findTargetWidgetEx(point *structs.Point, recursive bool) *Widget {
 	if !w.visible || !w.isPointIn(point) {
 		return nil
 	}
@@ -429,8 +432,8 @@ func (w *Widget) findTargetWidgetEx(point *Point, recursive bool) *Widget {
 	if recursive && len(w.children) > 0 {
 		n := len(w.children) - 1
 		p := w.point
-		p.x = point.x - w.rect.x
-		p.y = point.y - w.rect.y
+		p.X = point.X - w.rect.X
+		p.Y = point.Y - w.rect.Y
 
 		for i := n; i > 0; i-- {
 			iter := w.children[i]
@@ -444,7 +447,7 @@ func (w *Widget) findTargetWidgetEx(point *Point, recursive bool) *Widget {
 	return w
 }
 
-func (w *Widget) findTargetWidget(point *Point) *Widget {
+func (w *Widget) findTargetWidget(point *structs.Point) *Widget {
 	return w.findTargetWidgetEx(point, true)
 }
 
@@ -580,9 +583,9 @@ func (w *Widget) getInputTips() string {
 }
 
 func (widget *Widget) drawInputTips(context *dom.CanvasRenderingContext2D) {
-	h := widget.rect.h
-	w := widget.rect.w
-	y := widget.rect.h >> 1
+	h := widget.rect.H
+	w := widget.rect.W
+	y := widget.rect.H >> 1
 	x := widget.leftMargin
 	text := widget.getText()
 	inputTips := widget.getInputTips()
@@ -593,7 +596,7 @@ func (widget *Widget) drawInputTips(context *dom.CanvasRenderingContext2D) {
 
 	style := widget.getStyle("")
 	context.Save()
-	context.Font = style.font
+	context.Font = style.Font
 	context.FillStyle = "#E0E0E0"
 
 	context.BeginPath()
@@ -613,10 +616,10 @@ func (w *Widget) drawTips(context *dom.CanvasRenderingContext2D) {
 	tips := w.getTips()
 	if len(tips) > 0 {
 		style := w.getStyle("")
-		x := w.rect.w >> 1
-		y := w.rect.h >> 1
-		font := style.font
-		textColor := style.textColor
+		x := w.rect.W >> 1
+		y := w.rect.H >> 1
+		font := style.Font
+		textColor := style.TextColor
 
 		if len(font) > 0 && len(textColor) > 0 {
 			context.TextAlign = "center"
@@ -714,8 +717,8 @@ func (w *Widget) setState(state string, recursive bool) *Widget {
 }
 
 func (w *Widget) move(x, y int) *Widget {
-	w.rect.x = x
-	w.rect.y = y
+	w.rect.X = x
+	w.rect.Y = y
 	if w.onMoved != nil {
 		w.onMoved()
 	}
@@ -724,30 +727,30 @@ func (w *Widget) move(x, y int) *Widget {
 }
 
 func (w *Widget) moveToCenter(moveX, moveY int) *Widget {
-	pw := w.parent.rect.w
-	ph := w.parent.rect.h
+	pw := w.parent.rect.W
+	ph := w.parent.rect.H
 
 	if moveX != 0 {
-		w.rect.x = (pw - w.rect.w) >> 1
+		w.rect.X = (pw - w.rect.W) >> 1
 	}
 
 	if moveY != 0 {
-		w.rect.y = (ph - w.rect.h) >> 1
+		w.rect.Y = (ph - w.rect.H) >> 1
 	}
 
 	return w
 }
 
 func (w *Widget) moveToBottom(border int) *Widget {
-	ph := w.parent.rect.h
-	w.rect.y = ph - w.rect.h - border
+	ph := w.parent.rect.H
+	w.rect.Y = ph - w.rect.H - border
 
 	return w
 }
 
 func (w *Widget) moveDelta(dx, dy int) *Widget {
-	w.rect.x = w.rect.x + dx
-	w.rect.y = w.rect.y + dy
+	w.rect.X = w.rect.X + dx
+	w.rect.Y = w.rect.Y + dy
 	if w.onMoved != nil {
 		w.onMoved()
 	}
@@ -756,8 +759,8 @@ func (w *Widget) moveDelta(dx, dy int) *Widget {
 }
 
 func (widget *Widget) resize(w, h int) *Widget {
-	widget.rect.w = w
-	widget.rect.h = h
+	widget.rect.W = w
+	widget.rect.H = h
 	if widget.onSized != nil {
 		widget.onSized()
 	}
@@ -796,7 +799,7 @@ func (w *Widget) setKeyUpHandler(keyUpHandler KeyUpHandler) *Widget {
 	return w
 }
 
-func (w *Widget) onClicked(point *Point) bool {
+func (w *Widget) onClicked(point *structs.Point) bool {
 	if w.clickedHandler != nil {
 		w.clickedHandler(w, point)
 	}
@@ -846,7 +849,7 @@ func (w *Widget) setLineWidth(lineWidth int) *Widget {
 	return w
 }
 
-func (w *Widget) getLineWidth(style *ThemeStyle) int {
+func (w *Widget) getLineWidth(style *theme.ThemeStyle) int {
 	if w.lineWidth > 0 {
 		return w.lineWidth
 	}
@@ -861,16 +864,16 @@ func (w *Widget) setRoundRadius(roundRadius int) *Widget {
 
 func (w *Widget) ensureTheme() *Widget {
 	if len(w.themeType) > 0 {
-		w.theme = GetThemeManagerInstance().get(w.themeType, false)
+		w.theme = theme.Get(w.themeType, false)
 	} else {
-		w.theme = GetThemeManagerInstance().get(w.t, false)
+		w.theme = theme.Get(w.t, false)
 	}
 
 	return w
 }
 
-func (w *Widget) getStyle(_state string) *ThemeStyle {
-	var style *ThemeStyle
+func (w *Widget) getStyle(_state string) *theme.ThemeStyle {
+	var style *theme.ThemeStyle
 	w.ensureTheme()
 	var state string
 	if state = _state; len(state) == 0 {
@@ -879,24 +882,24 @@ func (w *Widget) getStyle(_state string) *ThemeStyle {
 
 	if !w.enable {
 		if w.selectable && w.isSelected() {
-			style = w.theme[STATE_DISABLE_SELECTED]
+			style = w.theme.StateSelected
 		} else {
-			style = w.theme[STATE_DISABLE]
+			style = w.theme.StateDisable
 		}
 	} else {
 		if w.selectable && w.selected {
-			style = w.theme[STATE_SELECTED]
+			style = w.theme.StateSelected
 		} else if state == STATE_OVER {
-			style = w.theme[STATE_OVER]
+			style = w.theme.StateOver
 		} else if state == STATE_ACTIVE {
-			style = w.theme[STATE_ACTIVE]
+			style = w.theme.StateActive
 		} else {
-			style = w.theme[STATE_NORMAL]
+			style = w.theme.StateNormal
 		}
 	}
 
 	if style != nil {
-		style = w.theme[STATE_NORMAL]
+		style = w.theme.StateNormal
 	}
 
 	return style
@@ -917,7 +920,7 @@ func (w *Widget) setBorderStyle(borderStyle int) *Widget {
 func (w *Widget) paintBackground(context *dom.CanvasRenderingContext2D) {
 	style := w.getStyle("")
 	if style != nil {
-		if style.bgImage != nil {
+		if style.BgImage != nil {
 			w.paintBackgroundImage(context, style)
 		} else {
 			w.paintBackgroundColor(context, style)
@@ -925,11 +928,11 @@ func (w *Widget) paintBackground(context *dom.CanvasRenderingContext2D) {
 	}
 }
 
-func (w *Widget) paintBackgroundImage(context *dom.CanvasRenderingContext2D, style *ThemeStyle) {
+func (w *Widget) paintBackgroundImage(context *dom.CanvasRenderingContext2D, style *theme.ThemeStyle) {
 	dst := w.rect
-	bgImage := style.bgImage.(Image)
-	image := bgImage.getImage()
-	src := bgImage.getImageRect()
+	bgImage := style.BgImage
+	image := bgImage.GetImage()
+	src := bgImage.GetImageRect()
 
 	var imageDisplay int
 	imageDisplay = w.imageDisplay
@@ -938,10 +941,10 @@ func (w *Widget) paintBackgroundImage(context *dom.CanvasRenderingContext2D, sty
 		var topOut, leftOut, rightOut, bottomOut int
 		x := -leftOut
 		y := topOut
-		w := dst.w + rightOut + leftOut
-		h := dst.h + bottomOut + topOut
+		w := dst.W + rightOut + leftOut
+		h := dst.H + bottomOut + topOut
 
-		bgImage.draw(context, imageDisplay, x, y, w, h, src)
+		bgImage.Draw(context, imageDisplay, x, y, w, h, src)
 	}
 
 	return
@@ -975,30 +978,30 @@ func (widget *Widget) paintBottomBorder(context *dom.CanvasRenderingContext2D, w
 	context.Stroke()
 }
 
-func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, style *ThemeStyle) {
+func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, style *theme.ThemeStyle) {
 	dst := w.rect
 	context.BeginPath()
 	if w.roundRadius != 0 {
-		roundRadius := math.Min(float64((dst.h>>1)-1), float64(w.roundRadius))
-		utils.DrawRoundRect(context, float64(dst.w), float64(dst.h), roundRadius, 0)
+		roundRadius := math.Min(float64((dst.H>>1)-1), float64(w.roundRadius))
+		utils.DrawRoundRect(context, float64(dst.W), float64(dst.H), roundRadius, 0)
 	} else {
-		context.Rect(0, 0, float64(dst.w), float64(dst.h))
+		context.Rect(0, 0, float64(dst.W), float64(dst.H))
 	}
 
-	if style.fillColor != "" {
-		context.FillStyle = style.fillColor
+	if style.FillColor != "" {
+		context.FillStyle = style.FillColor
 		context.Fill()
 	}
 
 	lineWidth := w.getLineWidth(style)
-	if lineWidth > 0 || style.lineColor != "" || w.borderStyle == BORDER_STYLE_NONE {
+	if lineWidth > 0 || style.LineColor != "" || w.borderStyle == BORDER_STYLE_NONE {
 		return
 	}
 
 	width := w.getWidth()
 	height := w.getHeight()
 	context.LineWidth = lineWidth
-	context.StrokeStyle = style.lineColor
+	context.StrokeStyle = style.LineColor
 	if w.borderStyle == BORDER_STYLE_ALL {
 		context.Stroke()
 		context.BeginPath()
@@ -1102,7 +1105,7 @@ func (w *Widget) draw(context *dom.CanvasRenderingContext2D) {
 	context.Save()
 	w.relayout(context, false)
 
-	context.Translate(float64(w.rect.x), float64(w.rect.y))
+	context.Translate(float64(w.rect.X), float64(w.rect.Y))
 	w.beforePaint(context)
 	w.paintBackground(context)
 	w.paintSelf(context)
@@ -1168,10 +1171,10 @@ func (w *Widget) closeWindow(retInfo interface{}) *Widget {
 	return w
 }
 
-func (w *Widget) findTarget(point *Point) *Widget {
+func (w *Widget) findTarget(point *structs.Point) *Widget {
 	p := w.getAbsPosition()
-	w.point.x = point.x - p.x
-	w.point.y = point.y - p.y
+	w.point.X = point.X - p.X
+	w.point.Y = point.Y - p.Y
 
 	for i := len(w.children) - 1; i >= 0; i-- {
 		child := w.children[i]
@@ -1188,7 +1191,7 @@ func (w *Widget) findTarget(point *Point) *Widget {
 }
 
 /////////////////////////////////////////////////////
-func (w *Widget) onPointerDown(point *Point) bool {
+func (w *Widget) onPointerDown(point *structs.Point) bool {
 	if !w.enable {
 		return false
 	}
@@ -1211,7 +1214,7 @@ func (w *Widget) onPointerDown(point *Point) bool {
 	return true
 }
 
-func (w *Widget) onPointerMove(point *Point) bool {
+func (w *Widget) onPointerMove(point *structs.Point) bool {
 	if !w.enable {
 		return false
 	}
@@ -1243,7 +1246,7 @@ func (w *Widget) onPointerMove(point *Point) bool {
 	return true
 }
 
-func (w *Widget) onPointerUp(point *Point) bool {
+func (w *Widget) onPointerUp(point *structs.Point) bool {
 	if !w.enable {
 		return false
 	}
@@ -1318,7 +1321,7 @@ func (w *Widget) onWheel(delta float64) bool {
 	return false
 }
 
-func (w *Widget) onDoubleClick(point *Point) {
+func (w *Widget) onDoubleClick(point *structs.Point) {
 	// var target *Widget
 
 	// if win, ok := w.(*Window); ok && win.grabWidget != nil {
@@ -1339,7 +1342,7 @@ func (w *Widget) onDoubleClick(point *Point) {
 	// return
 }
 
-func (w *Widget) onContextMenu(point *Point) {
+func (w *Widget) onContextMenu(point *structs.Point) {
 	target := w.findTarget(point)
 
 	if target != nil {
@@ -1354,7 +1357,7 @@ func (w *Widget) onContextMenu(point *Point) {
 	return
 }
 
-func (w *Widget) onLongPress(point *Point) {
+func (w *Widget) onLongPress(point *structs.Point) {
 	target := w.findTarget(point)
 
 	if target != nil {

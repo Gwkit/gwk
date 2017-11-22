@@ -1,5 +1,9 @@
 package gwk
 
-func isPointInRect(point *Point, rect *Rect) bool {
+import (
+	"github.com/Luncher/gwk/pkg/structs"
+)
+
+func isPointInRect(point *structs.Point, rect *structs.Rect) bool {
 	return false
 }

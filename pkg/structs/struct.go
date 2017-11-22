@@ -1,8 +1,8 @@
-package gwk
+package structs
 
 type Position struct {
-	x int
-	y int
+	X int
+	Y int
 }
 
 func NewPosition(x, y int) *Position {
@@ -10,7 +10,7 @@ func NewPosition(x, y int) *Position {
 }
 
 type Rect struct {
-	x, y, w, h int
+	X, Y, W, H int
 }
 
 func NewRect(x, y, w, h int) *Rect {
@@ -18,7 +18,7 @@ func NewRect(x, y, w, h int) *Rect {
 }
 
 type Point struct {
-	x, y int
+	X, Y int
 }
 
 func NewPoint(x, y int) *Point {
