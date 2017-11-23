@@ -1,21 +1,26 @@
 package gwk
 
 import (
+	"fmt"
 	"github.com/Luncher/gwk/pkg/rt"
 	"github.com/Luncher/gwk/pkg/structs"
 	"honnef.co/go/js/dom"
 	"math"
 )
 
-type CloseHandler func()
-type OnClosed func(info interface{})
+type WindowCloseHandler func()
+
+type WindowHandler interface {
+	show(visible bool) *Widget
+	close(interface{}) *Widget
+	onClose(interface{})
+	onShow(visible bool)
+}
 
 type Window struct {
 	Widget
-	t            string
-	grabWidget   interface{}
-	onClosed     OnClosed
-	closeHandler CloseHandler
+	grabWidget   WidgetEventsHandler
+	closeHandler WindowCloseHandler
 	manager      *WindowManager
 	downPosition structs.Position
 	upPosition   structs.Position
@@ -24,8 +29,7 @@ type Window struct {
 
 func NewWindow(manager *WindowManager, x, y, w, h float32) *Window {
 	window := &Window{
-		Widget: *NewWidget(nil, x, y, w, h),
-		t:      TYPE_WINDOW,
+		Widget: *NewWidget(TYPE_WINDOW, nil, x, y, w, h),
 	}
 
 	if manager != nil {
@@ -34,10 +38,12 @@ func NewWindow(manager *WindowManager, x, y, w, h float32) *Window {
 		window.manager = GetWindowManagerInstance()
 	}
 
+	manager.addWindow(window)
+
 	return window
 }
 
-func (window *Window) grab(widget *Widget) *Window {
+func (window *Window) grab(widget WidgetEventsHandler) *Window {
 	window.grabWidget = widget
 	window.manager.grab(window)
 
@@ -70,12 +76,13 @@ func (window *Window) onPointerDown(point *structs.Point) {
 	window.lastPosition.X = point.X
 	window.lastPosition.Y = point.Y
 
-	if widget, ok := window.grabWidget.(Widget); ok {
-		widget.onPointerDown(point)
+	if window.grabWidget != nil {
+		window.grabWidget.onPointerDown(point)
 	} else {
 		window.Widget.onPointerDown(point)
 	}
 
+	fmt.Printf("window PostRedraw\n")
 	window.PostRedraw()
 
 	return
@@ -85,8 +92,9 @@ func (window *Window) onPointerMove(point *structs.Point) {
 	window.lastPosition.X = point.X
 	window.lastPosition.Y = point.Y
 
-	if widget, ok := window.grabWidget.(Widget); ok {
-		widget.onPointerMove(point)
+	fmt.Printf("window onPointerMove \n")
+	if window.grabWidget != nil {
+		window.grabWidget.onPointerMove(point)
 	} else {
 		window.Widget.onPointerMove(point)
 	}
@@ -100,8 +108,8 @@ func (window *Window) onPointerUp(point *structs.Point) {
 	window.upPosition.X = point.X
 	window.upPosition.Y = point.Y
 
-	if widget, ok := window.grabWidget.(Widget); ok {
-		widget.onPointerUp(point)
+	if window.grabWidget != nil {
+		window.grabWidget.onPointerUp(point)
 	} else {
 		window.Widget.onPointerUp(point)
 	}
@@ -112,6 +120,16 @@ func (window *Window) onPointerUp(point *structs.Point) {
 	return
 }
 
+func (window *Window) onDoubleClick(point *structs.Point) {
+	if window.grabWidget != nil {
+		window.grabWidget.onDoubleClick(point)
+		window.target = window.grabWidget
+		if window.state != STATE_DISABLE && window.doubleClickedHandler != nil {
+			window.doubleClickedHandler(point)
+		}
+	}
+}
+
 func (window *Window) isClicked() bool {
 	dx := window.lastPosition.X - window.downPosition.X
 	dy := window.lastPosition.Y - window.downPosition.Y
@@ -120,8 +138,8 @@ func (window *Window) isClicked() bool {
 }
 
 func (window *Window) onContextMenu(point *structs.Point) {
-	if widget, ok := window.grabWidget.(Widget); ok {
-		widget.onContextMenu(point)
+	if window.grabWidget != nil {
+		window.grabWidget.onContextMenu(point)
 	} else {
 		window.Widget.onContextMenu(point)
 	}
@@ -130,8 +148,8 @@ func (window *Window) onContextMenu(point *structs.Point) {
 }
 
 func (window *Window) onKeyDown(code int) {
-	if widget, ok := window.grabWidget.(Widget); ok {
-		widget.onKeyDown(code)
+	if window.grabWidget != nil {
+		window.grabWidget.onKeyDown(code)
 	} else {
 		window.Widget.onKeyDown(code)
 	}
@@ -140,8 +158,8 @@ func (window *Window) onKeyDown(code int) {
 }
 
 func (window *Window) onKeyUp(code int) {
-	if widget, ok := window.grabWidget.(Widget); ok {
-		widget.onKeyUp(code)
+	if window.grabWidget != nil {
+		window.grabWidget.onKeyUp(code)
 	} else {
 		window.Widget.onKeyUp(code)
 	}
@@ -161,10 +179,6 @@ func (window *Window) show(visible bool) {
 }
 
 func (window *Window) close(retInfo interface{}) {
-	if window.onClosed != nil {
-		window.onClosed(retInfo)
-	}
-
 	if window.closeHandler != nil {
 		window.closeHandler()
 	}

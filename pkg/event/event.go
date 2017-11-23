@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"github.com/Luncher/gwk/pkg/keyevent"
 	"github.com/Luncher/gwk/pkg/structs"
 	"honnef.co/go/js/dom"
@@ -21,15 +22,15 @@ type EventConsumer interface {
 }
 
 type EventsManager struct {
-	point             *structs.Point
-	lastPoint         *structs.Point
+	point             structs.Point
+	lastPoint         structs.Point
 	lastPointEvent    dom.Event
 	pointerDown       bool
 	pointerDownPoint  *structs.Point
 	eventsConsumer    EventConsumer
 	longPressDuration int
 	pointerDeviceType string
-	points            []structs.Point
+	points            [8]structs.Point
 }
 
 var eventManager *EventsManager
@@ -53,42 +54,42 @@ func (manager *EventsManager) setEventsConsumer(consumer EventConsumer, element 
 func (manager *EventsManager) addEventListeners(element dom.Element) {
 	manager.pointerDeviceType = "mouse"
 	element.AddEventListener("dbclick", false, func(event dom.Event) {
-		manager.onDoubleClickGlobal(event.(dom.MouseEvent))
+		manager.onDoubleClickGlobal(event.(*dom.MouseEvent))
 	})
 
 	element.AddEventListener("mousewheel", false, func(event dom.Event) {
-		manager.onWheelGlobal(event.(dom.WheelEvent))
+		manager.onWheelGlobal(event.(*dom.WheelEvent))
 	})
 
 	element.AddEventListener("DOMMouseScroll", false, func(event dom.Event) {
-		manager.onWheelGlobal(event.(dom.WheelEvent))
+		manager.onWheelGlobal(event.(*dom.WheelEvent))
 	})
 
 	element.AddEventListener("mousedown", false, func(event dom.Event) {
-		manager.onMouseDownGlobal(event.(dom.MouseEvent))
+		manager.onMouseDownGlobal(event.(*dom.MouseEvent))
 	})
 
 	element.AddEventListener("mousemove", false, func(event dom.Event) {
-		manager.onMouseMoveGlobal(event.(dom.MouseEvent))
+		manager.onMouseMoveGlobal(event.(*dom.MouseEvent))
 	})
 
 	element.AddEventListener("mouseup", false, func(event dom.Event) {
-		manager.onMouseUpGlobal(event.(dom.MouseEvent))
+		manager.onMouseUpGlobal(event.(*dom.MouseEvent))
 	})
 
 	element.AddEventListener("keyup", false, func(event dom.Event) {
-		manager.onKeyUpGlobal(event.(dom.KeyboardEvent))
+		manager.onKeyUpGlobal(event.(*dom.KeyboardEvent))
 	})
 
 	element.AddEventListener("keydown", false, func(event dom.Event) {
-		manager.onKeyDownGlobal(event.(dom.KeyboardEvent))
+		manager.onKeyDownGlobal(event.(*dom.KeyboardEvent))
 	})
 
 	return
 }
 
 func (manager *EventsManager) targetIsEditor(event dom.Event) bool {
-	input := event.Target().(*dom.HTMLInputElement)
+	input := event.Target()
 	name := strings.ToLower(input.TagName())
 
 	if name != "body" && name != "canvas" {
@@ -98,7 +99,7 @@ func (manager *EventsManager) targetIsEditor(event dom.Event) bool {
 	return false
 }
 
-func (manager *EventsManager) shouldIgnoreKey(event dom.KeyboardEvent) bool {
+func (manager *EventsManager) shouldIgnoreKey(event *dom.KeyboardEvent) bool {
 	code := event.KeyCode
 
 	if code == keyevent.DOM_VK_F5 ||
@@ -114,23 +115,22 @@ func (manager *EventsManager) shouldIgnoreKey(event dom.KeyboardEvent) bool {
 	return false
 }
 
-func (manager *EventsManager) isRightMouseEvent(event dom.MouseEvent) bool {
+func (manager *EventsManager) isRightMouseEvent(event *dom.MouseEvent) bool {
 	return event.Button > 2 && event.Button != 4
 }
 
-func (manager *EventsManager) getAbsPoint(event dom.Event, i int) *structs.Point {
+func (manager *EventsManager) getAbsPoint(event *dom.MouseEvent, i int) *structs.Point {
 	p := &manager.points[i]
 
 	if event != nil {
-		me := event.(dom.MouseEvent)
-		p.X = me.ClientX
-		p.X = me.ClientY
+		p.X = event.ClientX
+		p.Y = event.ClientY
 
 		manager.lastPoint.X = p.X
 		manager.lastPoint.Y = p.Y
-		manager.lastPointEvent = me
+		manager.lastPointEvent = event
 	} else {
-		p = manager.lastPoint
+		p = &manager.lastPoint
 	}
 
 	return p
@@ -142,13 +142,13 @@ func (manager *EventsManager) cancelDefaultAction(event dom.Event) bool {
 	return false
 }
 
-func (manager *EventsManager) onDoubleClick(point *structs.Point, event dom.MouseEvent) {
+func (manager *EventsManager) onDoubleClick(point *structs.Point, event *dom.MouseEvent) {
 	if manager.eventsConsumer.PreprocessEvent("", event) {
 		manager.eventsConsumer.OnDoubleClick(point)
 	}
 }
 
-func (manager *EventsManager) onDoubleClickGlobal(event dom.MouseEvent) bool {
+func (manager *EventsManager) onDoubleClickGlobal(event *dom.MouseEvent) bool {
 	if manager.targetIsEditor(event) {
 		return true
 	}
@@ -170,7 +170,8 @@ func (manager *EventsManager) onPointerDown(point *structs.Point, event dom.Even
 	return
 }
 
-func (manager *EventsManager) onMouseDownGlobal(event dom.MouseEvent) bool {
+func (manager *EventsManager) onMouseDownGlobal(event *dom.MouseEvent) bool {
+	fmt.Printf("onMouseDownGlobal\n")
 	if manager.targetIsEditor(event) {
 		return true
 	}
@@ -188,8 +189,9 @@ func (manager *EventsManager) onPointerMove(point *structs.Point, event dom.Even
 	}
 }
 
-func (manager *EventsManager) onMouseMoveGlobal(event dom.MouseEvent) bool {
-	if manager.targetIsEditor(event) || !manager.pointerDown {
+func (manager *EventsManager) onMouseMoveGlobal(event *dom.MouseEvent) bool {
+	fmt.Println(manager.pointerDown)
+	if manager.targetIsEditor(event) && !manager.pointerDown {
 		return true
 	}
 
@@ -211,8 +213,9 @@ func (manager *EventsManager) onPointerUp(point *structs.Point, event dom.Event)
 	manager.pointerDown = false
 }
 
-func (manager *EventsManager) onMouseUpGlobal(event dom.MouseEvent) bool {
-	if manager.targetIsEditor(event) || !manager.pointerDown {
+func (manager *EventsManager) onMouseUpGlobal(event *dom.MouseEvent) bool {
+	fmt.Printf("onMouseUpGlobal\n")
+	if manager.targetIsEditor(event) && !manager.pointerDown {
 		return true
 	}
 
@@ -231,7 +234,7 @@ func (manager *EventsManager) onWheel(delta float64, event dom.Event) {
 	}
 }
 
-func (manager *EventsManager) onWheelGlobal(event dom.WheelEvent) bool {
+func (manager *EventsManager) onWheelGlobal(event *dom.WheelEvent) bool {
 	if event.Target().GetAttribute("localName") != "canvas" {
 		return manager.cancelDefaultAction(event)
 	}
@@ -251,7 +254,7 @@ func (em *EventsManager) onKeyUp(code int, event dom.Event) {
 	}
 }
 
-func (manager *EventsManager) onKeyUpGlobal(event dom.KeyboardEvent) bool {
+func (manager *EventsManager) onKeyUpGlobal(event *dom.KeyboardEvent) bool {
 	code := event.KeyCode
 
 	if manager.shouldIgnoreKey(event) {
@@ -268,7 +271,7 @@ func (manager *EventsManager) onKeyDown(code int, event dom.Event) {
 	}
 }
 
-func (manager *EventsManager) onKeyDownGlobal(event dom.KeyboardEvent) bool {
+func (manager *EventsManager) onKeyDownGlobal(event *dom.KeyboardEvent) bool {
 	code := event.KeyCode
 
 	if manager.shouldIgnoreKey(event) {

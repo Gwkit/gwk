@@ -25,8 +25,8 @@ type WindowManager struct {
 	windows            []*Window
 	grabWindows        []*Window
 	eventLogging       bool
-	pointerDownPoint   *structs.Point
-	lastPointerPoint   *structs.Point
+	pointerDownPoint   structs.Point
+	lastPointerPoint   structs.Point
 	enablePaint        bool
 	beforeDrawHandlers []BeforeDrawHandler
 	lastUpdateTime     time.Time
@@ -58,6 +58,7 @@ func (manager *WindowManager) init(app *Application, canvas dom.HTMLCanvasElemen
 	manager.canvas = canvas
 	manager.w = canvas.Width
 	manager.h = canvas.Height
+	manager.enablePaint = true
 
 	return manager
 }
@@ -106,6 +107,7 @@ func (manager *WindowManager) findTargetWin(point *structs.Point) *Window {
 
 	for _, window := range manager.windows {
 		if window.visible {
+			fmt.Println(window.rect)
 			if isPointInRect(point, window.rect) {
 				return window
 			}
@@ -223,7 +225,7 @@ func (manager *WindowManager) OnPointerDown(point *structs.Point) {
 	if manager.target != nil {
 		manager.target.onPointerDown(point)
 	} else {
-		fmt.Printf("Window Manager: no target for x=%d y=%d", point.X, point.Y)
+		fmt.Printf("Window Manager: no target for x=%d y=%d\n", point.X, point.Y)
 	}
 
 	return
@@ -249,13 +251,13 @@ func (manager *WindowManager) OnPointerMove(point *structs.Point) {
 
 func (manager *WindowManager) OnPointerUp(point *structs.Point) {
 	manager.translatePoint(point)
-	point = manager.lastPointerPoint
+	point = &manager.lastPointerPoint
 	manager.target = manager.findTargetWin(point)
 
 	if manager.target != nil {
 		manager.target.onPointerUp(point)
 	} else {
-		fmt.Printf("Window Manager: no target for x=%d y=%d", point.X, point.Y)
+		fmt.Printf("Window Manager: no target for x=%d y=%d\n", point.X, point.Y)
 	}
 	manager.pointerDown = false
 
@@ -263,7 +265,7 @@ func (manager *WindowManager) OnPointerUp(point *structs.Point) {
 }
 
 func (manager *WindowManager) getLastPointerPoint() *structs.Point {
-	return manager.lastPointerPoint
+	return &manager.lastPointerPoint
 }
 
 func (manager *WindowManager) isPointerDown() bool {
@@ -301,7 +303,7 @@ func (manager *WindowManager) OnContextMenu(point *structs.Point) {
 	if manager.target != nil {
 		manager.target.onContextMenu(point)
 	} else {
-		fmt.Printf("Window Manager: no target for x=%d y=%d", point.X, point.Y)
+		fmt.Printf("Window Manager: no target for x=%d y=%d\n", point.X, point.Y)
 	}
 
 	return
@@ -310,7 +312,7 @@ func (manager *WindowManager) OnContextMenu(point *structs.Point) {
 func (manager *WindowManager) OnKeyDown(code int) {
 	if manager.target == nil {
 		manager.target = manager.findTargetWin(&structs.Point{X: 50, Y: 50})
-		fmt.Printf("onKeyDown findTargetWin=")
+		fmt.Printf("onKeyDown findTargetWin=\n")
 		fmt.Println(manager.target)
 	}
 
@@ -334,7 +336,7 @@ func (manager *WindowManager) OnWheel(delta float64) {
 
 	if manager.target == nil {
 		manager.target = manager.findTargetWin(&structs.Point{X: 50, Y: 50})
-		fmt.Printf("onWheel findTargetWin=")
+		fmt.Printf("onWheel findTargetWin=\n")
 		fmt.Println(manager.target)
 	}
 
@@ -424,7 +426,7 @@ func (manager *WindowManager) getPaintEnable() bool {
 
 func (manager *WindowManager) setPaintEnable(enablePaint bool) *WindowManager {
 	manager.enablePaint = enablePaint
-	fmt.Printf("setPaintEnable:%t", enablePaint)
+	fmt.Printf("setPaintEnable:%t\n", enablePaint)
 
 	if manager.enablePaint {
 		manager.postRedraw()
@@ -446,9 +448,11 @@ func (manager *WindowManager) postRedraw() {
 		return
 	}
 
+	fmt.Printf("postRedraw \n")
 	manager.requestCount++
 	if manager.requestCount < 2 {
 		dom.GetWindow().RequestAnimationFrame(func(d time.Duration) {
+			fmt.Printf("RequestAnimationFrame %v\n", d)
 			manager.onDrawFrame()
 		})
 	}

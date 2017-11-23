@@ -200,7 +200,10 @@ func GetThemeURL() string {
 }
 
 func getDefaultFont(themeJson *ThemeJson) *ThemeFont {
-	return themeJson.Global.font.macosx
+	if themeJson.Global != nil {
+		return themeJson.Global.font.macosx
+	}
+	return nil
 }
 
 func applyDefaultFont(style *ThemeStyle, font *ThemeFont) {
@@ -274,12 +277,16 @@ func loadTheme(themeURL string, reader io.ReadCloser) error {
 }
 
 func LoadThemeURL(url string) error {
-	res, err := http.Get(url)
-	if err != nil {
-		return err
-	}
+	go func() {
+		res, err := http.Get(url)
+		if err != nil {
+			panic(err)
+		} else {
+			loadTheme(url, res.Body)
+		}
+	}()
 
-	return loadTheme(url, res.Body)
+	return nil
 }
 
 func Get(name string, noDefault bool) *ThemeWidget {

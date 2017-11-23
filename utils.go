@@ -5,5 +5,5 @@ import (
 )
 
 func isPointInRect(point *structs.Point, rect *structs.Rect) bool {
-	return false
+	return point.X >= rect.X && point.Y >= rect.Y && point.X < (rect.X+rect.W) && point.Y < (rect.Y+rect.H)
 }

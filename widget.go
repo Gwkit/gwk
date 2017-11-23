@@ -103,6 +103,37 @@ const (
 	BORDER_STYLE_ALL    = 0xffff
 )
 
+type PointerEventHandler interface {
+	onPointerDown(*structs.Point)
+	onPointerUp(*structs.Point)
+	onDoubleClick(*structs.Point)
+	onPointerMove(*structs.Point)
+	onContextMenu(*structs.Point)
+	onLongPress(*structs.Point)
+	onWheel(delta float64) bool
+}
+
+type KeyEventHandler interface {
+	onKeyDown(code int)
+	onKeyUp(code int)
+}
+
+type WidgetPainter interface {
+	draw(*dom.CanvasRenderingContext2D)
+	beforePaint(*dom.CanvasRenderingContext2D)
+	paintBackground(*dom.CanvasRenderingContext2D)
+	paintSelf(*dom.CanvasRenderingContext2D)
+	paintChildren(*dom.CanvasRenderingContext2D)
+	drawInputTips(*dom.CanvasRenderingContext2D)
+	afterPaint(*dom.CanvasRenderingContext2D)
+}
+
+type WidgetEventsHandler interface {
+	KeyEventHandler
+	PointerEventHandler
+	setState(string, bool) *Widget
+}
+
 type CheckEnable func() bool
 type SetChecked func(bool, bool) *Widget
 type RemovedHandler func()
@@ -138,7 +169,7 @@ type Widget struct {
 	checkEnable          CheckEnable
 	removedHandler       RemovedHandler
 	children             []*Widget
-	point                *structs.Point
+	point                structs.Point
 	cursor               string
 	imageDisplay         int
 	borderStyle          int
@@ -150,7 +181,7 @@ type Widget struct {
 	isScrollView         bool
 	xOffset              int
 	yOffset              int
-	target               *Widget
+	target               WidgetEventsHandler
 	inputTips            string
 	leftMargin           int
 	editing              bool
@@ -173,10 +204,13 @@ type Widget struct {
 	paintFocusLater      bool
 }
 
-func NewWidget(parent *Widget, x, y, w, h float32) *Widget {
+func NewWidget(t string, parent *Widget, x, y, w, h float32) *Widget {
 	widget := &Widget{
+		t:            t,
 		parent:       parent,
 		cursor:       "default",
+		visible:      true,
+		enable:       true,
 		borderStyle:  BORDER_STYLE_ALL,
 		imageDisplay: image.DISPLAY_9PATCH,
 		rect:         &structs.Rect{X: int(x), Y: int(y), W: int(w), H: int(h)},
@@ -268,13 +302,9 @@ func (w *Widget) isPointerDown() bool {
 	return GetWindowManagerInstance().isPointerDown()
 }
 
+//FIXME
 func (w *Widget) isClicked() bool {
-	win := w.getWindow()
-	if win != nil {
-		return win.isClicked()
-	} else {
-		return GetWindowManagerInstance().isClicked()
-	}
+	return GetWindowManagerInstance().isClicked()
 }
 
 func (w *Widget) isAltDown() bool {
@@ -408,13 +438,11 @@ func (w *Widget) redraw(rect *structs.Rect) {
 	// p := w.getAbsPosition()
 
 	// if rect == nil {
-	// 	rect = &Rect{x: 0, y: 0, w: w.rect.W, h: w.rect.H}
+	// 	rect = &structs.Rect{X: 0, Y: 0, W: w.rect.W, H: w.rect.H}
 	// }
-	// rect.X = p.x + rect.X
-	// rect.Y = p.y + rect.Y
+	// rect.X = p.X + rect.X
+	// rect.Y = p.Y + rect.Y
 
-	// GetWindowManagerInstance().redraw(rect)
-	//TODO
 	// GetWindowManagerInstance().redraw(rect)
 
 	return
@@ -437,7 +465,7 @@ func (w *Widget) findTargetWidgetEx(point *structs.Point, recursive bool) *Widge
 
 		for i := n; i > 0; i-- {
 			iter := w.children[i]
-			ret := iter.findTargetWidgetEx(p, false)
+			ret := iter.findTargetWidgetEx(&p, false)
 			if ret != nil {
 				return ret
 			}
@@ -481,7 +509,7 @@ func (w *Widget) remove() *Widget {
 			}
 		}
 
-		if parent.target == w {
+		if t, ok := parent.target.(*Widget); ok && t == w {
 			parent.target = nil
 		}
 
@@ -1171,7 +1199,7 @@ func (w *Widget) closeWindow(retInfo interface{}) *Widget {
 	return w
 }
 
-func (w *Widget) findTarget(point *structs.Point) *Widget {
+func (w *Widget) findTarget(point *structs.Point) WidgetEventsHandler {
 	p := w.getAbsPosition()
 	w.point.X = point.X - p.X
 	w.point.Y = point.Y - p.Y
@@ -1182,7 +1210,7 @@ func (w *Widget) findTarget(point *structs.Point) *Widget {
 			continue
 		}
 
-		if isPointInRect(w.point, child.rect) {
+		if isPointInRect(&w.point, child.rect) {
 			return child
 		}
 	}
@@ -1191,11 +1219,15 @@ func (w *Widget) findTarget(point *structs.Point) *Widget {
 }
 
 /////////////////////////////////////////////////////
-func (w *Widget) onPointerDown(point *structs.Point) bool {
+func (w *Widget) onPointerDown(point *structs.Point) {
 	if !w.enable {
-		return false
+		return
 	}
 
+	fmt.Println(point)
+	fmt.Println(point)
+	fmt.Println(point)
+	fmt.Println(point)
 	target := w.findTarget(point)
 	if w.target != nil && w.target != target {
 		w.target.setState(STATE_NORMAL, false)
@@ -1211,15 +1243,15 @@ func (w *Widget) onPointerDown(point *structs.Point) bool {
 	w.target = target
 	w.PostRedraw()
 
-	return true
+	return
 }
 
-func (w *Widget) onPointerMove(point *structs.Point) bool {
+func (w *Widget) onPointerMove(point *structs.Point) {
 	if !w.enable {
-		return false
+		return
 	}
 
-	var target *Widget
+	var target WidgetEventsHandler
 	if w.isPointerDown() {
 		target = w.target
 	} else {
@@ -1243,12 +1275,12 @@ func (w *Widget) onPointerMove(point *structs.Point) bool {
 	w.target = target
 	w.PostRedraw()
 
-	return true
+	return
 }
 
-func (w *Widget) onPointerUp(point *structs.Point) bool {
+func (w *Widget) onPointerUp(point *structs.Point) {
 	if !w.enable {
-		return false
+		return
 	}
 
 	target := w.findTarget(point)
@@ -1278,7 +1310,7 @@ func (w *Widget) onPointerUp(point *structs.Point) bool {
 	w.target = target
 	w.PostRedraw()
 
-	return true
+	return
 }
 
 func (w *Widget) onKeyDown(code int) {
@@ -1322,24 +1354,17 @@ func (w *Widget) onWheel(delta float64) bool {
 }
 
 func (w *Widget) onDoubleClick(point *structs.Point) {
-	// var target *Widget
+	target := w.findTarget(point)
+	if target != nil {
+		target.onDoubleClick(point)
+		w.target = target
+	}
 
-	// if win, ok := w.(*Window); ok && win.grabWidget != nil {
-	// 	target = win.grabWidget
-	// } else {
-	// 	target = w.findTarget(point)
-	// }
+	if w.state != STATE_DISABLE && w.doubleClickedHandler != nil {
+		w.doubleClickedHandler(point)
+	}
 
-	// if target != nil {
-	// 	target.onDoubleClick(point)
-	// 	w.target = target
-	// }
-
-	// if w.state != STATE_DISABLE && w.doubleClickedHandler != nil {
-	// 	w.doubleClickedHandler(point)
-	// }
-
-	// return
+	return
 }
 
 func (w *Widget) onContextMenu(point *structs.Point) {
