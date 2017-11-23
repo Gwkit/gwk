@@ -198,7 +198,7 @@ type Widget struct {
 	wheelHandler         WheelHandler
 	lineWidth            int
 	roundRadius          int
-	theme                *theme.ThemeWidget
+	Theme                *theme.ThemeWidget
 	onBeforePaint        OnBeforePaintHandler
 	onAfterPaint         OnAfterPaintHandler
 	paintFocusLater      bool
@@ -892,9 +892,9 @@ func (w *Widget) setRoundRadius(roundRadius int) *Widget {
 
 func (w *Widget) ensureTheme() *Widget {
 	if len(w.themeType) > 0 {
-		w.theme = theme.Get(w.themeType, false)
+		w.Theme = theme.Get(w.themeType, false)
 	} else {
-		w.theme = theme.Get(w.t, false)
+		w.Theme = theme.Get(w.t, false)
 	}
 
 	return w
@@ -910,24 +910,24 @@ func (w *Widget) getStyle(_state string) *theme.ThemeStyle {
 
 	if !w.enable {
 		if w.selectable && w.isSelected() {
-			style = w.theme.StateSelected
+			style = w.Theme.StateSelected
 		} else {
-			style = w.theme.StateDisable
+			style = w.Theme.StateDisable
 		}
 	} else {
 		if w.selectable && w.selected {
-			style = w.theme.StateSelected
+			style = w.Theme.StateSelected
 		} else if state == STATE_OVER {
-			style = w.theme.StateOver
+			style = w.Theme.StateOver
 		} else if state == STATE_ACTIVE {
-			style = w.theme.StateActive
+			style = w.Theme.StateActive
 		} else {
-			style = w.theme.StateNormal
+			style = w.Theme.StateNormal
 		}
 	}
 
 	if style != nil {
-		style = w.theme.StateNormal
+		style = w.Theme.StateNormal
 	}
 
 	return style
