@@ -17,6 +17,9 @@ type JSONThemeStyle struct {
 	FontSize       int    `json:"fontSize"`
 	TextColor      string `json:"textColor"`
 	LineColor      string `json:"lineColor"`
+	TipsFillColor  string `json:"tipsFillColor"`
+	TipsLineColor  string `json:"tipsLineColor"`
+	TipsTextColor  string `json:"tipsTextColor"`
 	BgImage        string `json:"bgImage"`
 	FgImage        string `json:"fgImage"`
 	BgImageTips    string `json:"bgImageTips"`
@@ -30,6 +33,9 @@ type ThemeStyle struct {
 	FontSize       int
 	TextColor      string
 	LineColor      string
+	TipsFillColor  string
+	TipsLineColor  string
+	TipsTextColor  string
 	BgImage        *image.Image
 	FgImage        *image.Image
 	BgImageTips    *image.Image
@@ -84,6 +90,9 @@ func (style *ThemeStyle) UnmarshalJSON(rawData []byte) error {
 	style.FontSize = JsonStyle.FontSize
 	style.TextColor = JsonStyle.TextColor
 	style.LineColor = JsonStyle.LineColor
+	style.TipsFillColor = JsonStyle.TipsFillColor
+	style.TipsLineColor = JsonStyle.TipsLineColor
+	style.TipsTextColor = JsonStyle.TipsTextColor
 
 	if len(JsonStyle.BgImage) > 0 {
 		style.BgImage = image.NewImage(JsonStyle.BgImage)
