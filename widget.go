@@ -150,6 +150,7 @@ type KeyUpHandler func(int)
 type OnBeforePaintHandler func(*dom.CanvasRenderingContext2D)
 type OnAfterPaintHandler func(*dom.CanvasRenderingContext2D)
 type WheelHandler func(float64)
+type OnChangedHandler func(interface{})
 
 type Widget struct {
 	id                   string
@@ -198,10 +199,11 @@ type Widget struct {
 	wheelHandler         WheelHandler
 	lineWidth            int
 	roundRadius          int
-	Theme                *theme.ThemeWidget
+	theme                *theme.ThemeWidget
 	onBeforePaint        OnBeforePaintHandler
 	onAfterPaint         OnAfterPaintHandler
 	paintFocusLater      bool
+	onChanged            OnChangedHandler
 }
 
 func NewWidget(t string, parent *Widget, x, y, w, h float32) *Widget {
@@ -892,9 +894,9 @@ func (w *Widget) setRoundRadius(roundRadius int) *Widget {
 
 func (w *Widget) ensureTheme() *Widget {
 	if len(w.themeType) > 0 {
-		w.Theme = theme.Get(w.themeType, false)
+		w.theme = theme.Get(w.themeType, false)
 	} else {
-		w.Theme = theme.Get(w.t, false)
+		w.theme = theme.Get(w.t, false)
 	}
 
 	return w
@@ -910,24 +912,24 @@ func (w *Widget) getStyle(_state string) *theme.ThemeStyle {
 
 	if !w.enable {
 		if w.selectable && w.isSelected() {
-			style = w.Theme.StateSelected
+			style = w.theme.StateSelected
 		} else {
-			style = w.Theme.StateDisable
+			style = w.theme.StateDisable
 		}
 	} else {
 		if w.selectable && w.selected {
-			style = w.Theme.StateSelected
+			style = w.theme.StateSelected
 		} else if state == STATE_OVER {
-			style = w.Theme.StateOver
+			style = w.theme.StateOver
 		} else if state == STATE_ACTIVE {
-			style = w.Theme.StateActive
+			style = w.theme.StateActive
 		} else {
-			style = w.Theme.StateNormal
+			style = w.theme.StateNormal
 		}
 	}
 
 	if style != nil {
-		style = w.Theme.StateNormal
+		style = w.theme.StateNormal
 	}
 
 	return style
