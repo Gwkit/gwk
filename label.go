@@ -208,11 +208,11 @@ func (label *Label) updateFont() *Label {
 	label.font = fmt.Sprint(label.fontSize) + "px"
 
 	if label.textB {
-		label.font += "bold"
+		label.font += "bold "
 	}
 
 	if label.textI {
-		label.font += "italic"
+		label.font += "italic "
 	}
 
 	label.font += "sans-serif"
