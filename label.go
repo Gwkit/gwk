@@ -105,11 +105,6 @@ func (label *Label) setLayoutFlexibleSize(flexibleSize int) *Label {
 	return label
 }
 
-func (label *Label) getFont() string {
-	style := label.getStyle("")
-	return style.Font
-}
-
 func (label *Label) layoutText(context *dom.CanvasRenderingContext2D, text string) {
 	width := label.rect.W - label.leftBorder - label.rightBorder
 
@@ -229,7 +224,7 @@ func (label *Label) getFont() string {
 	if len(label.font) > 0 {
 		return label.font
 	} else {
-		style := label.getStyle()
+		style := label.getStyle("")
 		return style.Font
 	}
 }
@@ -250,8 +245,9 @@ func (label *Label) paintSelf(context *dom.CanvasRenderingContext2D) {
 
 func (label *Label) paintSelfSL(context *dom.CanvasRenderingContext2D) {
 	text := label.text
+	label.paintSLText(context, text)
 
-	return label.paintSLText(context, text)
+	return
 }
 
 func (label *Label) paintSLText(context *dom.CanvasRenderingContext2D, text string) {
@@ -275,7 +271,7 @@ func (label *Label) paintSLText(context *dom.CanvasRenderingContext2D, text stri
 		context.TextAlign = "left"
 	}
 
-	context.FillText(text, x, y, -1)
+	context.FillText(text, float64(x), float64(y), -1)
 
 	return
 }
@@ -287,27 +283,27 @@ func (label *Label) paintSelfML(context *dom.CanvasRenderingContext2D) {
 	}
 
 	fontSize := label.fontSize
-	lineHeight := fontSize * 1.5
-	textHeight := lineHeight * len(lines)
+	lineHeight := float64(fontSize) * 1.5
+	textHeight := lineHeight * float64(len(lines))
 	height := label.rect.H - label.topBorder - label.bottomBorder
-	maxLineNr := math.Min(len(lines), math.Floor(height/lineHeight))
+	maxLineNr := int(math.Min(float64(len(lines)), math.Floor(float64(height)/lineHeight)))
 
 	var x, y int
 
-	textHeight = maxLineNr * lineHeight
+	textHeight = float64(maxLineNr) * lineHeight
 	switch label.textAlignV {
 	case "middle":
-		y = (label.rect.H - textHeight) >> 1
+		y = (label.rect.H - int(textHeight)) >> 1
 	case "bottom":
-		y = label.rect.H - textHeight - label.bottomBorder
+		y = label.rect.H - int(textHeight) - label.bottomBorder
 	default:
 		y = label.bottomBorder
 	}
 
 	textU := label.textU
 	width := label.rect.W
-	leftBorder = label.leftBorder
-	rightBorder = label.rightBorder
+	leftBorder := label.leftBorder
+	rightBorder := label.rightBorder
 
 	context.TextAlign = "left"
 	context.TextBaseline = "top"
@@ -319,15 +315,15 @@ func (label *Label) paintSelfML(context *dom.CanvasRenderingContext2D) {
 	for i := 0; i < maxLineNr; i++ {
 		str := lines[i]
 		if len(str) == 0 {
-			y += lineHeight
+			y += int(lineHeight)
 			continue
 		}
 		textWidth := context.MeasureText(str).Width
 		switch label.textAlignH {
 		case "center":
-			x = (width - textWidth) >> 1
+			x = (width - int(textWidth)) >> 1
 		case "right":
-			x = width - rightBorder - textWidth
+			x = width - rightBorder - int(textWidth)
 		default:
 			x = leftBorder
 		}
@@ -336,13 +332,13 @@ func (label *Label) paintSelfML(context *dom.CanvasRenderingContext2D) {
 
 		if label.textU {
 			ly := y + fontSize + 4
-			context.MoveTo(x, ly)
-			context.LineTo(x+textWidth, ly)
+			context.MoveTo(float64(x), float64(ly))
+			context.LineTo(float64(x)+textWidth, float64(ly))
 			context.Stroke()
 		}
 
-		context.FillText(str, x, y)
-		y += lineHeight
+		context.FillText(str, float64(x), float64(y), -1)
+		y += int(lineHeight)
 	}
 
 	return
