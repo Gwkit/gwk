@@ -300,7 +300,6 @@ func (label *Label) paintSelfML(context *dom.CanvasRenderingContext2D) {
 		y = label.bottomBorder
 	}
 
-	textU := label.textU
 	width := label.rect.W
 	leftBorder := label.leftBorder
 	rightBorder := label.rightBorder
