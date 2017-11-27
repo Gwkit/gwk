@@ -15,11 +15,11 @@ func (*Layout) canBreakBefore(char rune) bool {
 	chars := []rune{' ', '\t', '.', ']', ')', '}', ',', '?', ';', ':', '!', '"', '\'', '。', '？', '、', '”', '’', '】', '》', '）', '：', '；', '，'}
 	for i := range chars {
 		if chars[i] == char {
-			return i
+			return false
 		}
 	}
 
-	return -1
+	return true
 }
 
 func (*Layout) justifyText(context *dom.CanvasRenderingContext2D, line string, maxWidth int) string {
@@ -27,26 +27,25 @@ func (*Layout) justifyText(context *dom.CanvasRenderingContext2D, line string, m
 	words := strings.Split(line, " ")
 	N := len(words) - 1
 	spaceWidth := context.MeasureText(" ").Width
-	lastWidth := maxWidth - context.MeasureText(line).Width
+	lastWidth := float64(maxWidth) - context.MeasureText(line).Width
 
 	if lastWidth < spaceWidth || N == 0 {
 		return line
 	} else {
-		M = math.Floor(lastWidth / spaceWidth)
+		M = int(math.Floor(lastWidth / spaceWidth))
 	}
 
 	residue := M % N
-	num := math.Floor(M / N)
-	positions := [N]int{}
+	num := int(math.Floor(float64(M / N)))
+	positions := make([]int, N)
 
 	for i := range positions {
 		positions[i] = -1
 	}
 
-	ran := 0
 	realNum := 0
-	for i := 0; i < redidue; i++ {
-		ran := math.Floor(rand.Float64() * N)
+	for i := 0; i < residue; i++ {
+		ran := int(math.Floor(rand.Float64() * float64(N)))
 		if positions[ran] == -1 {
 			positions[ran] = 0
 		} else {
@@ -87,7 +86,7 @@ func (layout *Layout) wrapBySpace(context *dom.CanvasRenderingContext2D, width i
 		words := strings.Split(item, " ")
 		for j := 0; j < len(words); j++ {
 			lineTest := line + words[j] + " "
-			if context.MeasureText(lineTest).Width > width {
+			if int(context.MeasureText(lineTest).Width) > width {
 				line = line[0 : len(line)-1]
 				if justity {
 					result = append(result, layout.justifyText(context, line, width))
@@ -106,9 +105,9 @@ func (layout *Layout) wrapBySpace(context *dom.CanvasRenderingContext2D, width i
 				result = append(result, strings.TrimSpace(line))
 			}
 		}
-
-		return result
 	}
+
+	return result
 }
 
 func (*Layout) checkCJK(char rune) bool {
@@ -138,19 +137,17 @@ func (layout *Layout) getWordEnd(text string, start int) int {
 				break
 			}
 		}
-	}
-
-	if flag {
-		return i
-	} else {
-		return i - 1
+		if flag {
+			return i
+		} else {
+			return i - 1
+		}
 	}
 }
 
 func (layout *Layout) wrapByWord(context *dom.CanvasRenderingContext2D, width int, content string) []string {
-	var item string
-	result := make([]string)
-	contents := strings.Split("\n")
+	contents := strings.Split(content, "\n")
+	result := make([]string, 0, len(contents))
 
 	for _, it := range contents {
 		var line, word, lineTest string
@@ -161,8 +158,8 @@ func (layout *Layout) wrapByWord(context *dom.CanvasRenderingContext2D, width in
 
 		var startIndex int
 		itr := []rune(it)
-		for startIndex = 0; i < len(itr); {
-			endIndex := layout.getWordEnd(it, i)
+		for startIndex = 0; startIndex < len(itr); {
+			endIndex := layout.getWordEnd(it, startIndex)
 			if endIndex != -1 {
 				word = it[startIndex:endIndex]
 				lineTest = line + word
@@ -171,17 +168,17 @@ func (layout *Layout) wrapByWord(context *dom.CanvasRenderingContext2D, width in
 				break
 			}
 
-			if context.MeasureText(lineTest).Width > width {
-				if context.MeasureText(word).Width > width {
+			if int(context.MeasureText(lineTest).Width) > width {
+				if int(context.MeasureText(word).Width) > width {
 					if line != "" {
 						result = append(result, line)
 					}
 					var singleLine, singleLineTest string
 					for c := range word {
-						singleLineTest = singleLine + c
-						if context.MeasureText(singleLineTest).Width > width {
+						singleLineTest = singleLine + string(c)
+						if int(context.MeasureText(singleLineTest).Width) > width {
 							result = append(result, singleLine)
-							singleLine = c
+							singleLine = string(c)
 						} else {
 							singleLine = singleLineTest
 						}
