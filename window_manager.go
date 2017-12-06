@@ -493,8 +493,11 @@ func (manager *WindowManager) afterDrawWindows(context *dom.CanvasRenderingConte
 }
 
 func (manager *WindowManager) drawWindows(context *dom.CanvasRenderingContext2D) {
+	fmt.Printf("drawWindows \n")
+
 	manager.beforeDrawWindows(context)
 	for _, window := range manager.windows {
+		fmt.Printf("%#v\n", window.children[0])
 		window.draw(context)
 	}
 	manager.drawTips(context)
@@ -518,7 +521,7 @@ func (manager *WindowManager) getCanvas2D() *dom.CanvasRenderingContext2D {
 func (manager *WindowManager) doDraw(ctx *dom.CanvasRenderingContext2D) {
 	now := time.Now()
 	timeStep := now.Sub(manager.lastUpdateTime)
-
+	fmt.Printf("doDraw \n")
 	if !manager.checkNeedRedraw(timeStep.Seconds()) {
 		return
 	}

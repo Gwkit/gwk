@@ -118,8 +118,10 @@ type KeyEventHandler interface {
 	onKeyUp(code int)
 }
 
-type WidgetPainter interface {
+type PaintEventHandler interface {
+	ensureImages()
 	draw(*dom.CanvasRenderingContext2D)
+	relayout(*dom.CanvasRenderingContext2D, bool)
 	beforePaint(*dom.CanvasRenderingContext2D)
 	paintBackground(*dom.CanvasRenderingContext2D)
 	paintSelf(*dom.CanvasRenderingContext2D)
@@ -128,16 +130,26 @@ type WidgetPainter interface {
 	afterPaint(*dom.CanvasRenderingContext2D)
 }
 
-type WidgetEventsHandler interface {
+type WidgetInterface interface {
 	KeyEventHandler
+	PaintEventHandler
 	PointerEventHandler
+	getX() int
+	getY() int
+	destroy()
+	getWindow() *Window
+	showAll(visible bool) *Widget
 	setState(string, bool) *Widget
+	getParent() *Widget
+	setVisible(visible bool) *Widget
+	setText(text string, notify bool) *Widget
+	findTargetWidgetEx(point *structs.Point, recursive bool) *Widget
 }
 
 type CheckEnable func() bool
 type SetChecked func(bool, bool) *Widget
 type RemovedHandler func()
-type WidgeVisit func(*Widget)
+type WidgetVisit func(*Widget)
 type StateChangedHandler func(state string)
 type OnMovedHandler func()
 type OnResizedHandler func()
@@ -153,6 +165,7 @@ type WheelHandler func(float64)
 type OnChangedHandler func(interface{})
 
 type Widget struct {
+	I                    WidgetInterface
 	id                   string
 	t                    string
 	name                 string
@@ -166,9 +179,6 @@ type Widget struct {
 	tips                 string
 	enable               bool
 	checkable            bool
-	setChecked           SetChecked
-	checkEnable          CheckEnable
-	removedHandler       RemovedHandler
 	children             []*Widget
 	point                structs.Point
 	cursor               string
@@ -182,11 +192,17 @@ type Widget struct {
 	isScrollView         bool
 	xOffset              int
 	yOffset              int
-	target               WidgetEventsHandler
 	inputTips            string
 	leftMargin           int
+	lineWidth            int
+	roundRadius          int
 	editing              bool
+	paintFocusLater      bool
 	userData             interface{}
+	setChecked           SetChecked
+	checkEnable          CheckEnable
+	removedHandler       RemovedHandler
+	target               *Widget
 	onMoved              OnMovedHandler
 	stateChangedHandler  StateChangedHandler
 	onSized              OnResizedHandler
@@ -197,12 +213,9 @@ type Widget struct {
 	clickedHandler       ClickedHandler
 	doubleClickedHandler DoubleClickedHandler
 	wheelHandler         WheelHandler
-	lineWidth            int
-	roundRadius          int
 	theme                *theme.ThemeWidget
 	onBeforePaint        OnBeforePaintHandler
 	onAfterPaint         OnAfterPaintHandler
-	paintFocusLater      bool
 	onChanged            OnChangedHandler
 }
 
@@ -333,20 +346,12 @@ func (w *Widget) getLastPointerPoint() *structs.Point {
 	return GetWindowManagerInstance().getLastPointerPoint()
 }
 
-func (w *Widget) getTopWindow() *Widget {
+func (w *Widget) getTopWindow() *Window {
 	return w.getWindow()
 }
 
-func (w *Widget) getWindow() *Widget {
-	if w.parent == nil {
-		return w
-	}
-
-	p := w.parent
-	for ; p != nil; p = p.parent {
-	}
-
-	return p
+func (w *Widget) getWindow() *Window {
+	return w.parent.getWindow()
 }
 
 func (w *Widget) getParent() *Widget {
@@ -511,7 +516,7 @@ func (w *Widget) remove() *Widget {
 			}
 		}
 
-		if t, ok := parent.target.(*Widget); ok && t == w {
+		if t := parent.target; t == w {
 			parent.target = nil
 		}
 
@@ -549,7 +554,7 @@ func (w *Widget) destroyChildren() {
 	return
 }
 
-func (w *Widget) forEachChild(onVisit WidgeVisit) {
+func (w *Widget) forEachChild(onVisit WidgetVisit) {
 	for _, child := range w.children {
 		onVisit(child)
 	}
@@ -756,15 +761,16 @@ func (w *Widget) move(x, y int) *Widget {
 	return w
 }
 
-func (w *Widget) moveToCenter(moveX, moveY int) *Widget {
-	pw := w.parent.rect.W
-	ph := w.parent.rect.H
+func (w *Widget) MoveToCenter(moveX, moveY bool) *Widget {
+	parent := w.parent
+	pw := parent.rect.W
+	ph := parent.rect.H
 
-	if moveX != 0 {
+	if moveX {
 		w.rect.X = (pw - w.rect.W) >> 1
 	}
 
-	if moveY != 0 {
+	if moveY {
 		w.rect.Y = (ph - w.rect.H) >> 1
 	}
 
@@ -862,15 +868,15 @@ func (w *Widget) onRelayout(context *dom.CanvasRenderingContext2D, force bool) {
 
 }
 
-func (w *Widget) relayout(context *dom.CanvasRenderingContext2D, force bool) *Widget {
+func (w *Widget) relayout(context *dom.CanvasRenderingContext2D, force bool) {
 	if !w.needRelayout || !force || len(w.children) == 0 {
-		return w
+		return
 	}
 
 	w.onRelayout(context, force)
 	w.needRelayout = false
 
-	return w
+	return
 }
 
 func (w *Widget) setLineWidth(lineWidth int) *Widget {
@@ -1058,22 +1064,22 @@ func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, sty
 	return
 }
 
-func (w *Widget) paintSelf(context *dom.CanvasRenderingContext2D) *Widget {
-	return w
+func (w *Widget) paintSelf(context *dom.CanvasRenderingContext2D) {
+	return
 }
 
-func (w *Widget) beforePaint(context *dom.CanvasRenderingContext2D) *Widget {
+func (w *Widget) beforePaint(context *dom.CanvasRenderingContext2D) {
 	if w.onBeforePaint != nil {
 		w.onBeforePaint(context)
 	}
-	return w
+	return
 }
 
-func (w *Widget) afterPaint(context *dom.CanvasRenderingContext2D) *Widget {
+func (w *Widget) afterPaint(context *dom.CanvasRenderingContext2D) {
 	if w.onAfterPaint != nil {
 		w.onAfterPaint(context)
 	}
-	return w
+	return
 }
 
 func (w *Widget) setPaintFocusLater(paintFocusLater bool) *Widget {
@@ -1082,22 +1088,22 @@ func (w *Widget) setPaintFocusLater(paintFocusLater bool) *Widget {
 	return w
 }
 
-func (w *Widget) paintChildren(context *dom.CanvasRenderingContext2D) *Widget {
+func (w *Widget) paintChildren(context *dom.CanvasRenderingContext2D) {
 	if w.paintFocusLater {
 		w.paintChildrenFocusLater(context)
 	} else {
 		w.paintChildrenDefault(context)
 	}
 
-	return w
+	return
 }
 
-func (w *Widget) paintChildrenDefault(context *dom.CanvasRenderingContext2D) *Widget {
+func (w *Widget) paintChildrenDefault(context *dom.CanvasRenderingContext2D) {
 	for _, child := range w.children {
-		child.draw(context)
+		child.I.draw(context)
 	}
 
-	return w
+	return
 }
 
 func (w *Widget) paintChildrenFocusLater(context *dom.CanvasRenderingContext2D) {
@@ -1106,12 +1112,12 @@ func (w *Widget) paintChildrenFocusLater(context *dom.CanvasRenderingContext2D) 
 		if child.state == STATE_OVER || child.state == STATE_ACTIVE {
 			focusChild = child
 		} else {
-			child.draw(context)
+			child.I.draw(context)
 		}
 	}
 
 	if focusChild != nil {
-		focusChild.draw(context)
+		focusChild.I.draw(context)
 	}
 
 	return
@@ -1133,15 +1139,15 @@ func (w *Widget) draw(context *dom.CanvasRenderingContext2D) {
 	w.ensureImages()
 
 	context.Save()
-	w.relayout(context, false)
+	w.I.relayout(context, false)
 
 	context.Translate(float64(w.rect.X), float64(w.rect.Y))
-	w.beforePaint(context)
-	w.paintBackground(context)
-	w.paintSelf(context)
-	w.paintChildren(context)
-	w.drawInputTips(context)
-	w.afterPaint(context)
+	w.I.beforePaint(context)
+	w.I.paintBackground(context)
+	w.I.paintSelf(context)
+	w.I.paintChildren(context)
+	w.I.drawInputTips(context)
+	w.I.afterPaint(context)
 	context.ClosePath()
 	context.Restore()
 
@@ -1201,7 +1207,7 @@ func (w *Widget) closeWindow(retInfo interface{}) *Widget {
 	return w
 }
 
-func (w *Widget) findTarget(point *structs.Point) WidgetEventsHandler {
+func (w *Widget) findTarget(point *structs.Point) *Widget {
 	p := w.getAbsPosition()
 	w.point.X = point.X - p.X
 	w.point.Y = point.Y - p.Y
@@ -1253,7 +1259,7 @@ func (w *Widget) onPointerMove(point *structs.Point) {
 		return
 	}
 
-	var target WidgetEventsHandler
+	var target *Widget
 	if w.isPointerDown() {
 		target = w.target
 	} else {

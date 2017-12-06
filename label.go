@@ -8,7 +8,7 @@ import (
 )
 
 type Label struct {
-	Widget
+	*Widget
 	textU        bool
 	textI        bool
 	textB        bool
@@ -28,8 +28,8 @@ type Label struct {
 }
 
 func NewLabel(parent *Widget, x, y, w, h float32) *Label {
-	return &Label{
-		Widget:       *NewWidget(TYPE_WINDOW, nil, x, y, w, h),
+	label := &Label{
+		Widget:       NewWidget(TYPE_LABEL, parent, x, y, w, h),
 		flexibleSize: 4,
 		fontSize:     14,
 		leftBorder:   2,
@@ -40,6 +40,9 @@ func NewLabel(parent *Widget, x, y, w, h float32) *Label {
 		textAlignV:   "middle",
 		textAlignH:   "right",
 	}
+	label.Widget.I = label
+
+	return label
 }
 
 func (label *Label) getTipsStyle() *theme.ThemeStyle {
@@ -125,13 +128,12 @@ func (label *Label) relayout(context *dom.CanvasRenderingContext2D, force bool) 
 
 	text := label.getText()
 	label.layoutText(context, text)
-
 	label.needRelayout = false
 
 	return
 }
 
-func (label *Label) setText(str string, notify bool) *Label {
+func (label *Label) SetText(str string, notify bool) *Label {
 	label.text = str
 
 	if notify && label.onChanged != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/Luncher/gwk/pkg/structs"
 	"honnef.co/go/js/dom"
 	"math"
+	"time"
 )
 
 type WindowCloseHandler func()
@@ -18,8 +19,8 @@ type WindowHandler interface {
 }
 
 type Window struct {
-	Widget
-	grabWidget   WidgetEventsHandler
+	*Widget
+	grabWidget   *Widget
 	closeHandler WindowCloseHandler
 	manager      *WindowManager
 	downPosition structs.Position
@@ -29,8 +30,9 @@ type Window struct {
 
 func NewWindow(manager *WindowManager, x, y, w, h float32) *Window {
 	window := &Window{
-		Widget: *NewWidget(TYPE_WINDOW, nil, x, y, w, h),
+		Widget: NewWidget(TYPE_WINDOW, nil, x, y, w, h),
 	}
+	window.I = window
 
 	if manager != nil {
 		window.manager = manager
@@ -38,12 +40,18 @@ func NewWindow(manager *WindowManager, x, y, w, h float32) *Window {
 		window.manager = GetWindowManagerInstance()
 	}
 
-	manager.addWindow(window)
+	time.AfterFunc(time.Millisecond*10, func() {
+		manager.addWindow(window)
+	})
 
 	return window
 }
 
-func (window *Window) grab(widget WidgetEventsHandler) *Window {
+func (w *Window) getWindow() *Window {
+	return w
+}
+
+func (window *Window) grab(widget *Widget) *Window {
 	window.grabWidget = widget
 	window.manager.grab(window)
 
@@ -172,6 +180,8 @@ func (window *Window) beforePaint(ctx *dom.CanvasRenderingContext2D) {
 	ctx.Rect(0, 0, float64(window.rect.W), float64(window.rect.H))
 	ctx.Clip()
 	ctx.BeginPath()
+
+	return
 }
 
 func (window *Window) show(visible bool) {
