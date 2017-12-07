@@ -110,7 +110,6 @@ func (label *Label) setLayoutFlexibleSize(flexibleSize int) *Label {
 
 func (label *Label) layoutText(context *dom.CanvasRenderingContext2D, text string) {
 	width := label.rect.W - label.leftBorder - label.rightBorder
-
 	if len(text) > 0 {
 		context.Font = label.getFont()
 		label.lines = layoutText(context, label.fontSize, text, width, label.flexibleSize)

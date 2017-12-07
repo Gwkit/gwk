@@ -148,7 +148,6 @@ func (layout *Layout) getWordEnd(text string, start int) int {
 func (layout *Layout) wrapByWord(context *dom.CanvasRenderingContext2D, width int, content string) []string {
 	contents := strings.Split(content, "\n")
 	result := make([]string, 0, len(contents))
-
 	for _, it := range contents {
 		var line, word, lineTest string
 		if it == "" {
@@ -158,7 +157,7 @@ func (layout *Layout) wrapByWord(context *dom.CanvasRenderingContext2D, width in
 
 		var startIndex int
 		itr := []rune(it)
-		for startIndex = 0; startIndex < len(itr); {
+		for startIndex = 0; startIndex < len(itr); startIndex++ {
 			endIndex := layout.getWordEnd(it, startIndex)
 			if endIndex != -1 {
 				word = it[startIndex:endIndex]
