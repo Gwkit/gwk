@@ -766,6 +766,8 @@ func (w *Widget) MoveToCenter(moveX, moveY bool) *Widget {
 	pw := parent.rect.W
 	ph := parent.rect.H
 
+	fmt.Printf("%#v \n", w.rect)
+	fmt.Printf("%#v \n", parent.rect)
 	if moveX {
 		w.rect.X = (pw - w.rect.W) >> 1
 	}
@@ -773,6 +775,9 @@ func (w *Widget) MoveToCenter(moveX, moveY bool) *Widget {
 	if moveY {
 		w.rect.Y = (ph - w.rect.H) >> 1
 	}
+
+	fmt.Printf("%#v \n", w.rect)
+	fmt.Printf("%#v \n", parent.rect)
 
 	return w
 }
@@ -1023,7 +1028,6 @@ func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, sty
 	} else {
 		context.Rect(0, 0, float64(dst.W), float64(dst.H))
 	}
-	fmt.Printf("%#v\n", style)
 
 	if style.FillColor != "" {
 		context.FillStyle = style.FillColor
