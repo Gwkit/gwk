@@ -190,7 +190,6 @@ func (manager *EventsManager) onPointerMove(point *structs.Point, event dom.Even
 }
 
 func (manager *EventsManager) onMouseMoveGlobal(event *dom.MouseEvent) bool {
-	fmt.Println(manager.pointerDown)
 	if manager.targetIsEditor(event) && !manager.pointerDown {
 		return true
 	}

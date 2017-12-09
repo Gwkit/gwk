@@ -107,7 +107,6 @@ func (manager *WindowManager) findTargetWin(point *structs.Point) *Window {
 
 	for _, window := range manager.windows {
 		if window.visible {
-			fmt.Println(window.rect)
 			if isPointInRect(point, window.rect) {
 				return window
 			}
@@ -312,8 +311,6 @@ func (manager *WindowManager) OnContextMenu(point *structs.Point) {
 func (manager *WindowManager) OnKeyDown(code int) {
 	if manager.target == nil {
 		manager.target = manager.findTargetWin(&structs.Point{X: 50, Y: 50})
-		fmt.Printf("onKeyDown findTargetWin=\n")
-		fmt.Println(manager.target)
 	}
 
 	if manager.target != nil {
@@ -336,8 +333,6 @@ func (manager *WindowManager) OnWheel(delta float64) {
 
 	if manager.target == nil {
 		manager.target = manager.findTargetWin(&structs.Point{X: 50, Y: 50})
-		fmt.Printf("onWheel findTargetWin=\n")
-		fmt.Println(manager.target)
 	}
 
 	if manager.target != nil {
@@ -426,7 +421,6 @@ func (manager *WindowManager) getPaintEnable() bool {
 
 func (manager *WindowManager) setPaintEnable(enablePaint bool) *WindowManager {
 	manager.enablePaint = enablePaint
-	fmt.Printf("setPaintEnable:%t\n", enablePaint)
 
 	if manager.enablePaint {
 		manager.postRedraw()
@@ -497,7 +491,6 @@ func (manager *WindowManager) drawWindows(context *dom.CanvasRenderingContext2D)
 
 	manager.beforeDrawWindows(context)
 	for _, window := range manager.windows {
-		fmt.Printf("%#v\n", window.children[0])
 		window.draw(context)
 	}
 	manager.drawTips(context)
@@ -512,7 +505,10 @@ func (manager *WindowManager) checkNeedRedraw(timeStep float64) bool {
 
 func (manager *WindowManager) getCanvas2D() *dom.CanvasRenderingContext2D {
 	if manager.ctx == nil {
+		fmt.Printf("getCanvas2D New\n")
 		manager.ctx = manager.canvas.GetContext2d()
+	} else {
+		fmt.Printf("getCanvas2D Old\n")
 	}
 
 	return manager.ctx

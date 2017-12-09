@@ -1023,6 +1023,7 @@ func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, sty
 	} else {
 		context.Rect(0, 0, float64(dst.W), float64(dst.H))
 	}
+	fmt.Printf("%#v\n", style)
 
 	if style.FillColor != "" {
 		context.FillStyle = style.FillColor
@@ -1031,6 +1032,7 @@ func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, sty
 
 	lineWidth := w.getLineWidth(style)
 	if lineWidth > 0 || style.LineColor != "" || w.borderStyle == BORDER_STYLE_NONE {
+		context.BeginPath()
 		return
 	}
 
@@ -1089,6 +1091,7 @@ func (w *Widget) setPaintFocusLater(paintFocusLater bool) *Widget {
 }
 
 func (w *Widget) paintChildren(context *dom.CanvasRenderingContext2D) {
+	fmt.Printf("%s paintChildren\n", w.t)
 	if w.paintFocusLater {
 		w.paintChildrenFocusLater(context)
 	} else {
@@ -1136,7 +1139,7 @@ func (w *Widget) draw(context *dom.CanvasRenderingContext2D) {
 		w.setEnable(w.checkEnable())
 	}
 
-	w.ensureImages()
+	w.I.ensureImages()
 
 	context.Save()
 	w.I.relayout(context, false)
@@ -1232,10 +1235,6 @@ func (w *Widget) onPointerDown(point *structs.Point) {
 		return
 	}
 
-	fmt.Println(point)
-	fmt.Println(point)
-	fmt.Println(point)
-	fmt.Println(point)
 	target := w.findTarget(point)
 	if w.target != nil && w.target != target {
 		w.target.setState(STATE_NORMAL, false)
