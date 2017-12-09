@@ -3,7 +3,7 @@
 ![](https://raw.githubusercontent.com/Gwkit/gwk/master/logo.jpg)
 
 
-## Control list
+## Controls L ist
 - [ ] Label
 - [ ] Button
 - [ ] Dialog
@@ -15,5 +15,5 @@
 - [ ] ListView
 - [ ] TreeView
 
-### License
+## License
 [Apache License-2.0](https://www.apache.org/licenses/LICENSE-2.0)
