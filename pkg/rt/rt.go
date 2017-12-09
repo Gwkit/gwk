@@ -26,7 +26,7 @@ func (rt *GwkRT) init() {
 
 func (rt *GwkRT) GetViewPort() (int, int) {
 	height := dom.GetWindow().InnerHeight()
-	width := dom.GetWindow().InnerHeight()
+	width := dom.GetWindow().InnerWidth()
 
 	return width, height
 }
@@ -37,7 +37,7 @@ func (rt *GwkRT) GetMainCanvas(id string) *dom.HTMLCanvasElement {
 	}
 
 	if len(id) == 0 {
-		id = "main-canvas"
+		id = "main_canvas"
 	}
 
 	document := dom.GetWindow().Document()
