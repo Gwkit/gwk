@@ -1,6 +1,9 @@
-## go web toolkit
+# Golang Web Toolkit
 
-### Control list
+![](https://raw.githubusercontent.com/Gwkit/gwk/master/logo.jpg)
+
+
+## Control list
 - [ ] Label
 - [ ] Button
 - [ ] Dialog
