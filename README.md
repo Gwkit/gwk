@@ -3,7 +3,7 @@
 ![](https://raw.githubusercontent.com/Gwkit/gwk/master/logo.jpg)
 
 
-## Controls L ist
+## Controls List
 - [ ] Label
 - [ ] Button
 - [ ] Dialog
