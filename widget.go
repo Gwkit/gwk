@@ -142,7 +142,7 @@ type WidgetInterface interface {
 	setState(string, bool) *Widget
 	getParent() *Widget
 	setVisible(visible bool) *Widget
-	setText(text string, notify bool) *Widget
+	// SetText(text string, notify bool) *Widget
 	findTargetWidgetEx(point *structs.Point, recursive bool) *Widget
 }
 
@@ -182,7 +182,7 @@ type Widget struct {
 	children             []*Widget
 	point                structs.Point
 	cursor               string
-	imageDisplay         int
+	imageDisplay         image.Display
 	borderStyle          int
 	border               int
 	themeType            string
@@ -566,7 +566,7 @@ func (w *Widget) setTextOf(name, text string, notify bool) *Widget {
 	child := w.lookup(name, true)
 
 	if child != nil {
-		child.setText(text, notify)
+		child.SetText(text, notify)
 	} else {
 		fmt.Printf("not found %s", name)
 	}
@@ -586,14 +586,14 @@ func (w *Widget) setVisibleOf(name string, value bool) *Widget {
 	return child
 }
 
-func (w *Widget) setText(text string, notify bool) *Widget {
+func (w *Widget) SetText(text string, notify bool) *Widget {
 	w.text = text
 	w.setNeedRelayout(true)
 
 	return w
 }
 
-func (w *Widget) getText() string {
+func (w *Widget) GetText() string {
 	return w.text
 }
 
@@ -622,7 +622,7 @@ func (widget *Widget) drawInputTips(context *dom.CanvasRenderingContext2D) {
 	w := widget.rect.W
 	y := widget.rect.H >> 1
 	x := widget.leftMargin
-	text := widget.getText()
+	text := widget.GetText()
 	inputTips := widget.getInputTips()
 
 	if len(text) > 0 || len(inputTips) == 0 || widget.t != TYPE_EDIT || widget.editing {
@@ -941,7 +941,7 @@ func (w *Widget) getStyle(_state string) *theme.ThemeStyle {
 	return style
 }
 
-func (w *Widget) setImageDisplay(imageDisplay int) *Widget {
+func (w *Widget) setImageDisplay(imageDisplay image.Display) *Widget {
 	w.imageDisplay = imageDisplay
 
 	return w
@@ -967,20 +967,16 @@ func (w *Widget) paintBackground(context *dom.CanvasRenderingContext2D) {
 func (w *Widget) paintBackgroundImage(context *dom.CanvasRenderingContext2D, style *theme.ThemeStyle) {
 	dst := w.rect
 	bgImage := style.BgImage
-	image := bgImage.GetImage()
-	src := bgImage.GetImageRect()
+	imageDisplay := w.imageDisplay
 
-	var imageDisplay int
-	imageDisplay = w.imageDisplay
-
-	if image != nil {
+	if bgImage.GetImage() != nil {
 		var topOut, leftOut, rightOut, bottomOut int
 		x := -leftOut
 		y := topOut
 		w := dst.W + rightOut + leftOut
 		h := dst.H + bottomOut + topOut
 
-		bgImage.Draw(context, imageDisplay, x, y, w, h, src)
+		bgImage.Draw(context, imageDisplay, x, y, w, h)
 	}
 
 	return

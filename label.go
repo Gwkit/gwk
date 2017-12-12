@@ -125,7 +125,7 @@ func (label *Label) relayout(context *dom.CanvasRenderingContext2D, force bool) 
 		return
 	}
 
-	text := label.getText()
+	text := label.GetText()
 	label.layoutText(context, text)
 	label.needRelayout = false
 
