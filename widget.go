@@ -934,7 +934,7 @@ func (w *Widget) getStyle(_state string) *theme.ThemeStyle {
 		}
 	}
 
-	if style != nil {
+	if style == nil {
 		style = w.theme.StateNormal
 	}
 
