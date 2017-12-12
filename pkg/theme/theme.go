@@ -95,23 +95,23 @@ func (style *ThemeStyle) UnmarshalJSON(rawData []byte) error {
 	style.TipsTextColor = JsonStyle.TipsTextColor
 
 	if len(JsonStyle.BgImage) > 0 {
-		style.BgImage = image.NewImage(JsonStyle.BgImage)
+		style.BgImage = GetImage(JsonStyle.BgImage)
 	}
 
 	if len(JsonStyle.FgImage) > 0 {
-		style.FgImage = image.NewImage(JsonStyle.FgImage)
+		style.FgImage = GetImage(JsonStyle.FgImage)
 	}
 
 	if len(JsonStyle.BgImageTips) > 0 {
-		style.BgImageTips = image.NewImage(JsonStyle.BgImageTips)
+		style.BgImageTips = GetImage(JsonStyle.BgImageTips)
 	}
 
 	if len(JsonStyle.CheckedImage) > 0 {
-		style.CheckedImage = image.NewImage(JsonStyle.CheckedImage)
+		style.CheckedImage = GetImage(JsonStyle.CheckedImage)
 	}
 
 	if len(JsonStyle.UncheckedImage) > 0 {
-		style.UncheckedImage = image.NewImage(JsonStyle.UncheckedImage)
+		style.UncheckedImage = GetImage(JsonStyle.UncheckedImage)
 	}
 
 	return nil
@@ -314,7 +314,7 @@ func Get(name string, noDefault bool) *ThemeWidget {
 }
 
 func init() {
-	imagesURL = ""
+	imagesURL = "/theme/images.json"
 	themesLoaded = false
 	themeURL = "/ide/theme/default/theme.json"
 	defaultTheme = NewThemeWidget()
