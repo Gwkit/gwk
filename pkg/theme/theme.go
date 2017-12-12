@@ -279,6 +279,7 @@ func loadTheme(themeURL string, reader io.ReadCloser) error {
 			applyDefaultFont(widgetTheme.StateNormalCurrent, font)
 		}
 	}
+
 	themesLoaded = true
 	themes = themeJson.Widgets
 
@@ -300,8 +301,7 @@ func LoadThemeURL(url string) error {
 
 func Get(name string, noDefault bool) *ThemeWidget {
 	theme := themes[name]
-
-	if theme != nil {
+	if theme == nil {
 		if noDefault {
 			themes[name] = NewThemeWidget()
 			theme = themes[name]
