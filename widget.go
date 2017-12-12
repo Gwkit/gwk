@@ -1129,6 +1129,7 @@ func (w *Widget) draw(context *dom.CanvasRenderingContext2D) {
 	if !w.visible {
 		return
 	}
+	fmt.Printf("draw: %s\n", w.t)
 
 	if w.checkEnable != nil {
 		w.setEnable(w.checkEnable())

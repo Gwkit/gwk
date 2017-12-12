@@ -171,7 +171,6 @@ func (window *Window) onKeyUp(code int) {
 func (window *Window) beforePaint(ctx *dom.CanvasRenderingContext2D) {
 	ctx.BeginPath()
 	ctx.ClearRect(0, 0, float64(window.rect.W), float64(window.rect.H))
-
 	return
 }
 
