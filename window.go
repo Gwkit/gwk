@@ -11,13 +11,6 @@ import (
 
 type WindowCloseHandler func()
 
-type WindowHandler interface {
-	show(visible bool) *Widget
-	close(interface{}) *Widget
-	onClose(interface{})
-	onShow(visible bool)
-}
-
 type Window struct {
 	*Widget
 	grabWidget   *Widget
