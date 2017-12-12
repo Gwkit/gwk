@@ -168,11 +168,19 @@ func (label *Label) setLineColor(lineColor string) *Label {
 }
 
 func (label *Label) getTextColor() string {
-	return label.textColor
+	if len(label.textColor) != 0 {
+		return label.textColor
+	} else {
+		return label.getStyle("").TextColor
+	}
 }
 
 func (label *Label) getLineColor() string {
-	return label.lineColor
+	if len(label.lineColor) != 0 {
+		return label.lineColor
+	} else {
+		return label.getStyle("").LineColor
+	}
 }
 
 func (label *Label) setTextBold(textB bool) *Label {
@@ -271,8 +279,7 @@ func (label *Label) paintSLText(context *dom.CanvasRenderingContext2D, text stri
 		x = label.leftBorder
 		context.TextAlign = "left"
 	}
-
-	context.FillText(text, float64(x), float64(y), -1)
+	context.FillText(text, float64(x), float64(y), float64(w))
 
 	return
 }
