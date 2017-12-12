@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-var (
+const (
 	RoundRectTL  = 1
 	RoundRectTR  = 2
 	RoundRectBL  = 4
