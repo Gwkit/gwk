@@ -505,10 +505,7 @@ func (manager *WindowManager) checkNeedRedraw(timeStep float64) bool {
 
 func (manager *WindowManager) getCanvas2D() *dom.CanvasRenderingContext2D {
 	if manager.ctx == nil {
-		fmt.Printf("getCanvas2D New\n")
 		manager.ctx = manager.canvas.GetContext2d()
-	} else {
-		fmt.Printf("getCanvas2D Old\n")
 	}
 
 	return manager.ctx
