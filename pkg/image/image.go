@@ -128,7 +128,7 @@ func (image *Image) setupTexturePackerImage(url string) {
 func (image *Image) Draw(context *dom.CanvasRenderingContext2D, display Display, x, y, dw, dh int) {
 	imageVal := image.GetImage()
 	rect := image.GetImageRect()
-	fmt.Printf("image Draw\n")
+	fmt.Printf("image Draw:%s\n", display)
 	fmt.Println(imageVal.Complete)
 	DrawImage(context, imageVal, display, x, y, dw, dh, rect)
 
@@ -179,18 +179,16 @@ func DrawImage(context *dom.CanvasRenderingContext2D, image *dom.HTMLImageElemen
 
 	switch display {
 	case DISPLAY_AUTO_SIZE_DOWN:
-		scale := math.Min(math.Min(float64(dw/imageWidth), float64(dh/imageHeigth)), 1)
+		scale := math.Min(math.Min(float64(dw)/float64(imageWidth), float64(dh)/float64(imageHeigth)), 1)
 		iw := (imageWidth) * int(scale)
 		ih := (imageHeigth) * int(scale)
 
 		dx := x + ((dw - iw) >> 1)
 		dy := y + ((dh - ih) >> 1)
-		dx += (ox * int(scale))
-		dy += (oy * int(scale))
-		dw := (sw * int(scale))
-		dh := (sh * int(scale))
-		fmt.Printf("source: %d, %d, %d, %d\n", sx, sy, sw, sh)
-		fmt.Printf("dest: %d, %d, %d, %d\n", sx, sy, sw, sh)
+		dx += int(float64(ox) * scale)
+		dy += int(float64(oy) * scale)
+		dw := (float64(sw) * scale)
+		dh := (float64(sh) * scale)
 		context.Call("drawImage", image, float64(sx), float64(sy), float64(sw), float64(sh), float64(dx), float64(dy), float64(dw), float64(dh))
 	}
 }
