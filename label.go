@@ -40,7 +40,7 @@ func NewLabel(parent *Widget, x, y, w, h float32) *Label {
 		textAlignV:   "middle",
 		textAlignH:   "center",
 	}
-	label.Widget.I = label
+	label.I = label
 
 	return label
 }

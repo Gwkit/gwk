@@ -968,15 +968,15 @@ func (w *Widget) paintBackgroundImage(context *dom.CanvasRenderingContext2D, sty
 	dst := w.rect
 	bgImage := style.BgImage
 	imageDisplay := w.imageDisplay
-
 	if bgImage.GetImage() != nil {
-		var topOut, leftOut, rightOut, bottomOut int
-		x := -leftOut
-		y := topOut
-		w := dst.W + rightOut + leftOut
-		h := dst.H + bottomOut + topOut
-
+		x := 0
+		y := 0
+		w := dst.W
+		h := dst.H
+		fmt.Println(dst)
 		bgImage.Draw(context, imageDisplay, x, y, w, h)
+	} else {
+		fmt.Printf("backgroundImage is null\n")
 	}
 
 	return
@@ -1062,6 +1062,8 @@ func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, sty
 }
 
 func (w *Widget) paintSelf(context *dom.CanvasRenderingContext2D) {
+	fmt.Printf("%#v\n", w.I)
+	fmt.Printf("%s paintSelf\n", w.t)
 	return
 }
 
