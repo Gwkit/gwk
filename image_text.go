@@ -55,7 +55,7 @@ func (imageText *ImageText) setFgImageDisplay(display image.Display) {
 	imageText.fgImageDiplay = display
 }
 
-func (imageText *ImageText) PaintSelf(context *dom.CanvasRenderingContext2D) {
+func (imageText *ImageText) paintSelf(context *dom.CanvasRenderingContext2D) {
 	var x, y, w, h int
 	rect := imageText.rect
 	border := imageText.border
@@ -103,20 +103,20 @@ func (imageText *ImageText) PaintSelf(context *dom.CanvasRenderingContext2D) {
 				y = rect.H >> 1
 			}
 		}
-		context.FillText(text, float64(x), float64(y), -1)
+		context.FillText(text, float64(x), float64(y), float64(rect.W))
 	} else if len(text) > 0 {
 		if imageText.textAlign == "left" {
 			x = border
 			y = rect.H >> 1
 			context.TextAlign = "left"
 			context.TextBaseline = "middle"
-			context.FillText(text, float64(x), float64(y), -1)
+			context.FillText(text, float64(x), float64(y), float64(rect.W))
 		} else {
 			x = rect.W >> 1
 			y = rect.H >> 1
 			context.TextAlign = "center"
 			context.TextBaseline = "middle"
-			context.FillText(text, float64(x), float64(y), -1)
+			context.FillText(text, float64(x), float64(y), float64(rect.W))
 		}
 	} else if image != nil {
 		x = border

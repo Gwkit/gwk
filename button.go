@@ -9,6 +9,7 @@ func NewButton(parent *Widget, x, y, w, h float32) *Button {
 		ImageText: NewImageText(parent, x, y, w, h),
 	}
 	button.t = TYPE_BUTTON
+	button.I = button
 
 	return button
 }
