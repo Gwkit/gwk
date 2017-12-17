@@ -91,3 +91,17 @@ func LoadImagesURL(url string, onDone func(*TexturePackerJSON)) error {
 
 	return nil
 }
+
+func LoadDefaultImages(onDone func()) {
+	LoadImagesURL(imagesURL, func(*TexturePackerJSON) {
+		onDone()
+	})
+}
+
+var imagesURL string
+
+func init() {
+	imagesURL = "/theme/images.json"
+
+	return
+}

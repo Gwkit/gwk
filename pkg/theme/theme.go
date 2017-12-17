@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Luncher/gwk/pkg/image"
+	texturePacker "github.com/Luncher/gwk/pkg/texture_packer"
 	"io"
 	"net/http"
 	"path"
@@ -153,13 +154,6 @@ func NewThemeWidget() *ThemeWidget {
 	return widgetTheme
 }
 
-var themes map[string]*ThemeWidget
-var themesLoaded bool
-var imagesURL string
-var defaultTheme *ThemeWidget
-var themeURL string
-var imagesCache map[string]*image.Image
-
 func SetImagesURL(url string) {
 	imagesURL = url
 	return
@@ -177,7 +171,8 @@ func createImage(url string) *image.Image {
 	if image, ok := imagesCache[url]; ok {
 		return image
 	}
-	return image.NewImage(url)
+	imagesCache[url] = image.NewImage(url)
+	return imagesCache[url]
 }
 
 func GetImage(name string) *image.Image {
@@ -286,19 +281,6 @@ func loadTheme(themeURL string, reader io.ReadCloser) error {
 	return nil
 }
 
-func LoadThemeURL(url string) error {
-	go func() {
-		res, err := http.Get(url)
-		if err != nil {
-			panic(err)
-		} else {
-			loadTheme(url, res.Body)
-		}
-	}()
-
-	return nil
-}
-
 func Get(name string, noDefault bool) *ThemeWidget {
 	theme := themes[name]
 	if theme == nil {
@@ -313,9 +295,32 @@ func Get(name string, noDefault bool) *ThemeWidget {
 	return theme
 }
 
+func LoadThemeURL(url string) error {
+	go func() {
+		res, err := http.Get(url)
+		if err != nil {
+			panic(err)
+		} else {
+			texturePacker.LoadDefaultImages(func() {
+				loadTheme(url, res.Body)
+			})
+		}
+	}()
+
+	return nil
+}
+
+var themes map[string]*ThemeWidget
+var themesLoaded bool
+var imagesURL string
+var defaultTheme *ThemeWidget
+var themeURL string
+var imagesCache map[string]*image.Image
+
 func init() {
 	imagesURL = "/theme/images.json"
 	themesLoaded = false
+	imagesCache = make(map[string]*image.Image)
 	themeURL = "/ide/theme/default/theme.json"
 	defaultTheme = NewThemeWidget()
 
