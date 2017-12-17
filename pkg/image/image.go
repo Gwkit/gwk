@@ -3,6 +3,7 @@ package image
 import (
 	"fmt"
 	texturePacker "github.com/Luncher/gwk/pkg/texture_packer"
+	"github.com/Luncher/gwk/pkg/utils"
 	"honnef.co/go/js/dom"
 	"math"
 	"path/filepath"
@@ -190,5 +191,11 @@ func DrawImage(context *dom.CanvasRenderingContext2D, image *dom.HTMLImageElemen
 		dw := (float64(sw) * scale)
 		dh := (float64(sh) * scale)
 		context.Call("drawImage", image, float64(sx), float64(sy), float64(sw), float64(sh), float64(dx), float64(dy), float64(dw), float64(dh))
+	case DISPLAY_9PATCH:
+		dx := x + ox
+		dy := y + oy
+		dw -= (imageWidth - sw)
+		dh -= (imageHeigth - sh)
+		utils.DrawNightPatchEx(context, image, float64(sx), float64(sy), float64(sw), float64(sh), float64(dx), float64(dy), float64(dw), float64(dh))
 	}
 }
