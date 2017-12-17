@@ -1062,7 +1062,6 @@ func (w *Widget) paintBackgroundColor(context *dom.CanvasRenderingContext2D, sty
 }
 
 func (w *Widget) paintSelf(context *dom.CanvasRenderingContext2D) {
-	fmt.Printf("%#v\n", w.I)
 	fmt.Printf("%s paintSelf\n", w.t)
 	return
 }

@@ -75,7 +75,6 @@ func (image *Image) isTexturePacker(url string) bool {
 
 func (image *Image) SetImageSrc(url string) {
 	fmt.Printf("SetImageSrc: %s\n", url)
-	fmt.Printf("SetImageSrc: %s\n", url)
 	if image.isTexturePacker(url) {
 		image.setupTexturePackerImage(url)
 	} else {
@@ -129,8 +128,6 @@ func (image *Image) setupTexturePackerImage(url string) {
 func (image *Image) Draw(context *dom.CanvasRenderingContext2D, display Display, x, y, dw, dh int) {
 	imageVal := image.GetImage()
 	rect := image.GetImageRect()
-	fmt.Printf("image Draw:%s\n", display)
-	fmt.Println(imageVal.Complete)
 	DrawImage(context, imageVal, display, x, y, dw, dh, rect)
 
 	return
