@@ -18,6 +18,7 @@ type JSONThemeStyle struct {
 	FontSize       int    `json:"fontSize"`
 	TextColor      string `json:"textColor"`
 	LineColor      string `json:"lineColor"`
+	DragColor      string `json:"dragColor"`
 	TipsFillColor  string `json:"tipsFillColor"`
 	TipsLineColor  string `json:"tipsLineColor"`
 	TipsTextColor  string `json:"tipsTextColor"`
@@ -34,6 +35,7 @@ type ThemeStyle struct {
 	FontSize       int
 	TextColor      string
 	LineColor      string
+	DragColor      string
 	TipsFillColor  string
 	TipsLineColor  string
 	TipsTextColor  string
