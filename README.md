@@ -6,6 +6,7 @@
 ## Controls List
 - [ ] Label
 - [ ] Button
+- [ ] Edit
 - [ ] Dialog
 - [ ] Radio
 - [ ] Check
