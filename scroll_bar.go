@@ -17,7 +17,10 @@ type ScrollBar struct {
 	pointerDownPoint     *structs.Point
 	lastPointerPoint     *structs.Point
 	currentPositionSaved float64
+	scrolledHandler      onScrolledHandler
 }
+
+type onScrolledHandler func(currentPosition, scrollRange float64)
 
 func NewScrollBar(t string, parent *Widget, x, y, w, h float32) *ScrollBar {
 	bar := &ScrollBar{
@@ -31,10 +34,15 @@ func NewScrollBar(t string, parent *Widget, x, y, w, h float32) *ScrollBar {
 
 func (bar *ScrollBar) onScrolled(currentPosition, scrollRange float64) {
 	fmt.Printf("Scroll: %f\b", currentPosition)
+	if bar.scrolledHandler != nil {
+		bar.scrolledHandler(currentPosition, scrollRange)
+	}
+
+	return
 }
 
 func (bar *ScrollBar) onPointerDown(point *structs.Point) {
-	win := bar.getWindow().grab(bar.Widget)
+	bar.getWindow().grab(bar.Widget)
 	bar.pointerDownPoint.X = point.X
 	bar.pointerDownPoint.Y = point.Y
 	p := bar.translatePoint(point)
@@ -78,15 +86,15 @@ func (bar *ScrollBar) onPointerUp(point *structs.Point) {
 		p := bar.translatePoint(point)
 		if ww > hh {
 			if p.X < r.X {
-				bar.addToCurrentPosition(-ww)
+				bar.addToCurrentPosition(float64(-ww))
 			} else if p.X > (r.X + r.W) {
-				bar.addToCurrentPosition(ww)
+				bar.addToCurrentPosition(float64(ww))
 			}
 		} else {
 			if p.Y < r.Y {
-				bar.addToCurrentPosition(-hh)
+				bar.addToCurrentPosition(float64(-hh))
 			} else if p.Y > (r.Y + r.H) {
-				bar.addToCurrentPosition(hh)
+				bar.addToCurrentPosition(float64(hh))
 			}
 		}
 	}
@@ -113,6 +121,10 @@ func (bar *ScrollBar) addToCurrentPosition(delta float64) {
 	bar.setCurrentPosition(currentPosition)
 
 	return
+}
+
+func (bar *ScrollBar) getCurrentPosition() float64 {
+	return bar.currentPosition
 }
 
 func (bar *ScrollBar) setCurrentPosition(currentPosition float64) {
